@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-int send_dir(int sockfd,const char *name, int level,char *base_name)
+int send_dir(int sockfd,const char *name, int level,char *base_name, char* target)
 {
     DIR *dir;
     struct dirent *entry;
@@ -42,12 +42,12 @@ int send_dir(int sockfd,const char *name, int level,char *base_name)
 			{
                 continue;
 			}
-            send_dir(sockfd,path, level + 1,base_name);
+            send_dir(sockfd,path, level + 1,base_name,"");
         }else
         {
 			char full_path[500];
 			join_path(2,full_path,name, entry->d_name);
-			send_file(sockfd,base_name, full_path);
+			send_file(sockfd,base_name, full_path,target);
 			printf("%s\n", full_path);
 		}
     }while (entry = readdir(dir));
@@ -56,7 +56,7 @@ int send_dir(int sockfd,const char *name, int level,char *base_name)
 return 0;
 }
 
-int send_file(int sockfd,char *base_name,char *file_name)
+int send_file(int sockfd,char *base_name,char *file_name,char *target)
 {
 	char rel_name[400];
 	char *buf=NULL;
@@ -76,8 +76,8 @@ int send_file(int sockfd,char *base_name,char *file_name)
 
 	buf=(char*)malloc(sizeof(char)*packet_size);
 	bzero(buf, packet_size);
-
-	sprintf(buf,"gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#end",rel_name,results.st_size);
+	//printf("gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#end",rel_name,results.st_size,target);
+	sprintf(buf,"gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#end",rel_name,results.st_size,target);
 
 	if (results.st_size>0)
 	{

@@ -19,6 +19,33 @@
 struct node_struct nodes[100];
 static int nnodes=0;
 
+int broadcast_to_nodes(int sock,char *command)
+{
+printf("broadcast\n");
+int i;
+char buf[LENGTH];
+bzero(buf, LENGTH);
+
+sprintf(buf,"%s",command);
+
+	for (i=0;i<nnodes;i++)
+	{
+		printf("looking at %s\n",nodes[i].type);
+
+		if (strcmp(nodes[i].type,"slave")==0)
+		{
+			printf("broadcast to %s\n",nodes[i].type);
+			if(send(nodes[i].sock, buf, LENGTH, 0) < 0)
+			{
+				printf("%s\n", strerror(errno));
+				return -1;
+			}
+		}
+	}
+
+return 0;
+}
+
 struct node_struct* node_find(char *ip)
 {
 int i;
@@ -75,6 +102,19 @@ int cpus;
 	
 }
 
+int close_all_open()
+{
+int i;
+	for (i=0;i<nnodes;i++)
+	{
+		if (nodes[i].sock!=-1)
+		{
+    		close (nodes[i].sock);
+		}
+	}
+
+}
+
 int send_delete_node(int sock)
 {
 printf("send deregister node\n");
@@ -102,7 +142,6 @@ struct inp_file decode;
 char host_name[100];
 char full_host_name[100];
 int cpus=0;
-printf("cmp add node\n");
 	if (cmpstr_min(revbuf,"gpvdmaddnode")==0)
 	{
 
@@ -130,7 +169,6 @@ struct inp_file decode;
 char host_name[100];
 char full_host_name[100];
 int cpus=0;
-printf("cmp delete node\n");
 	if (cmpstr_min(revbuf,"gpvddeletenode")==0)
 	{
 
@@ -223,7 +261,7 @@ nodes_print();
 					printf("sending job to %s\n",nodes[i].ip);
 					join_path(2,full_path,calpath_get_store_path(), next->name);
 
-					send_dir(nodes[i].sock,full_path, 0,calpath_get_store_path());
+					send_dir(nodes[i].sock,full_path, 0,calpath_get_store_path(),"");
 					send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
 
 					nodes[i].load++;
@@ -267,22 +305,6 @@ int cmp_simfinished(int sock,char *revbuf)
 		inp_search_int(&decode,&cpus,"#cpus");
 		inp_search_string(&decode,ip,"#ip");
 
-		struct node_struct* master=NULL;
-		master=node_find_master();
-		printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-		if (master!=NULL)
-		{
-			printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-			join_path(2,full_dir,calpath_get_store_path(), dir_name);
-
-			ret=send_dir(master->sock,full_dir, 0,calpath_get_store_path());
-
-			if (ret!=0)
-			{
-				printf("dir not found %s %s\n",dir_name, calpath_get_store_path());
-			}
-		}
-
 		struct job* job=NULL;
 		job=jobs_find_job(dir_name);
 		if (job!=NULL)
@@ -294,6 +316,62 @@ int cmp_simfinished(int sock,char *revbuf)
 			node=node_find(ip);
 			node->load-=cpus;
 		}
+
+		struct node_struct* master=NULL;
+		master=node_find_master();
+		printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		if (master!=NULL)
+		{
+			struct job* my_job=jobs_find_job(dir_name);
+			if (my_job!=NULL)
+			{
+				printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",dir_name);
+
+				join_path(2,full_dir,calpath_get_store_path(), dir_name);
+
+			
+				ret=send_dir(master->sock,full_dir, 0,full_dir,my_job->target);
+
+				if (ret!=0)
+				{
+					printf("dir not found %s %s\n",dir_name, calpath_get_store_path());
+				}
+
+			}else
+			{
+				printf("Can't find job %s\n",dir_name);
+				jobs_print();
+			}
+
+			bzero(buf, LENGTH);
+
+			sprintf(buf,"gpvdmpercent\n#percent\n%lf\n#end",jobs_cal_percent_finished());
+
+			if(send(master->sock, buf, LENGTH, 0) < 0)
+			{
+				printf("%s\n", strerror(errno));
+				return -1;
+			}
+
+			printf("jobs remaining %d\n",jobs_remaining());
+			if (jobs_remaining()==0)
+			{
+				bzero(buf, LENGTH);
+
+				sprintf(buf,"gpvdmfinished\n");
+
+				if(send(master->sock, buf, LENGTH, 0) < 0)
+				{
+					printf("%s\n", strerror(errno));
+					return -1;
+				}
+
+				jobs_clear_all();
+			}
+
+
+		}
+
 		return 0;
 	}
 

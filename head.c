@@ -15,8 +15,18 @@
 #include <net/if.h>
 #include<pthread.h>
 
+static int global_sock;
+
+void head_ctrl_c(int s)
+{
+	close_all_open();
+	printf("Caught signal %d\n",s);
+	exit(1); 
+}
+
 int head ()
 {
+
 int port=0;
 char file_store_path[200];
 char ip[20];
@@ -85,6 +95,15 @@ calpath_set_store_path(file_store_path);
     int success=0;
 
 
+
+	struct sigaction sigIntHandler;
+
+	sigIntHandler.sa_handler = head_ctrl_c;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+
+	sigaction(SIGINT, &sigIntHandler, NULL);
+
     while(success == 0)
     {
         sin_size = sizeof(struct sockaddr_in);
@@ -102,12 +121,6 @@ calpath_set_store_path(file_store_path);
 		int iret1;
 
 		iret1 = pthread_create( &thread1, NULL,rx_loop,(void*)&nsockfd);
-
-		//if(iret1)
-		//{
-        //    printf("[server] connection closed.\n");
-		//	exit(0);
-		//}
 
      
     }

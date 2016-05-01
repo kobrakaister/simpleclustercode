@@ -79,13 +79,6 @@ cal_my_ip(interface);
 	}
 
 
-
-	//send_dir(sockfd,"./send/",0,"./send/");
-	//send_file(sockfd,"send2.txt");
-
-	printf("ok!\n");
-/////////////////////////////////////////
-
 	char revbuf[LENGTH];
 	int f_block_sz;
 
@@ -108,7 +101,9 @@ cal_my_ip(interface);
 
 		cmp_command(sockfd,revbuf);
 
-		cmp_rxfile(calpath_get_store_path(),sockfd,revbuf);
+		cmp_rxfile(sockfd,revbuf);
+
+		cmp_node_killall(sockfd,revbuf);
 
 		if(f_block_sz < 0)
 		{

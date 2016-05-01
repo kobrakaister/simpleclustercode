@@ -15,15 +15,22 @@
 #include <net/if.h>
 #include "inp.h"
 
-struct node_struct nodes[100];
-static int nnodes=0;
-
-int cmp_runjobs(int sock_han,char *revbuf)
+int cmp_node_killall(int sock,char *revbuf)
 {
-	char command[200];
-	if (cmpstr_min(revbuf,"gpvdmrunjobs")==0)
+	if (cmpstr_min(revbuf,"gpvdmnodekillall")==0)
 	{
-		run_jobs();
+		printf("killall go.o\n");
+		system("killall go.o");
+	}
+
+return -1;
+}
+
+int cmp_head_killall(int sock,char *revbuf)
+{
+	if (cmpstr_min(revbuf,"gpvdmkillall")==0)
+	{
+		broadcast_to_nodes(sock,"gpvdmnodekillall");
 	}
 
 return -1;

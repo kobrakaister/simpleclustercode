@@ -67,7 +67,7 @@ int cmp_command(int sock,char *revbuf)
 			bzero(buf, LENGTH);
 
 
-			send_dir(sock,sim_dir, 0,calpath_get_store_path());
+			send_dir(sock,sim_dir, 0,calpath_get_store_path(),"");
 
 			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
 
@@ -76,7 +76,7 @@ int cmp_command(int sock,char *revbuf)
 				printf("%s\n", strerror(errno));
 				return -1;
 			}
-			exit(0);
+			 _exit(EXIT_SUCCESS);
 		}
 	}
 

@@ -27,11 +27,11 @@ int sock=*((int*)s);
 
 		if(f_block_sz < 0)
 		{
-			printf(" %s\n", strerror(errno));
+			printf("here %s\n", strerror(errno));
 			return NULL;
 		}
 
-		cmp_rxfile(calpath_get_store_path(),sock,revbuf);
+		cmp_rxfile(sock,revbuf);
 
 		cmp_addjob(sock,revbuf);
 
@@ -47,6 +47,7 @@ int sock=*((int*)s);
 
 		cmp_register_master(sock,revbuf);
 
+		cmp_head_killall(sock,revbuf);
 	}
 
 	bzero(revbuf, LENGTH);

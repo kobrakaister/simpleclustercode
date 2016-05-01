@@ -21,14 +21,16 @@ int cmp_addjob(int sock_han,char *revbuf)
 {
 struct inp_file decode;
 char job_name[400];
-printf("job compare\n");
+char target[400];
+
 	if (cmpstr_min(revbuf,"gpvdmaddjob")==0)
 	{
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,job_name,"#job_name");
-		jobs_add(job_name);
+		sprintf(job_name,"job%d",njobs);
+		inp_search_string(&decode,target,"#target");
+		jobs_add(job_name,target);
 		jobs_print();
 		return 0;
 	}
@@ -40,11 +42,11 @@ void jobs_print()
 {
 int i;
 
-printf("n\tname\tdone\tstatus\n");
+printf("n\tname\tdone\tstatus\ttarget\n");
 
 	for (i=0;i<njobs;i++)
 	{
-		printf("%d\t%s\t%d\t%d\n",i,jobs[i].name,jobs[i].done,jobs[i].status);
+		printf("%d\t%s\t%d\t%d\t%s\n",i,jobs[i].name,jobs[i].done,jobs[i].status,jobs[i].target);
 	}
 }
 
@@ -67,9 +69,10 @@ int i;
 return NULL;
 }
 
-void jobs_add(char *name)
+void jobs_add(char *name,char *target)
 {
 	strcpy(jobs[njobs].name,name);
+	strcpy(jobs[njobs].target,target);
 	jobs[njobs].done=FALSE;
 	jobs[njobs].status=0;
 	jobs[njobs].cpus_needed=1;
@@ -86,6 +89,21 @@ int get_njobs()
 	return njobs;
 }
 
+double jobs_cal_percent_finished()
+{
+int i=0;
+int finished=0;
+
+	for (i=0;i<njobs;i++)
+	{
+		if (jobs[i].status==2)
+		{
+			finished++;
+		}
+	}
+return 100.0*((double)finished)/((double)njobs);
+}
+
 struct job* jobs_find_job(char *name)
 {
 int i=0;
@@ -98,4 +116,39 @@ int i=0;
 		}
 	}
 return NULL;
+}
+
+struct job* jobs_find_job_from_target(char *target)
+{
+int i=0;
+
+	for (i=0;i<njobs;i++)
+	{
+		if (strcmp(jobs[i].target,target)==0)
+		{
+			return &(jobs[i]);
+		}
+	}
+return NULL;
+}
+
+int jobs_remaining()
+{
+int i=0;
+int left=0;
+
+	for (i=0;i<njobs;i++)
+	{
+		//printf("%d %d %d\n",i,jobs[i].status,njobs);
+		if (jobs[i].status==2)
+		{
+			left++;
+		}
+	}
+return njobs-left;
+}
+
+void jobs_clear_all()
+{
+njobs=0;
 }

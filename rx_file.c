@@ -14,29 +14,40 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 
-int cmp_rxfile(char *file_store_path,int sock_han,char *revbuf)
+int cmp_rxfile(int sock_han,char *revbuf)
 {
 char save_name[200];
 struct inp_file decode;
 char dir_name[400];
+char target[400];
 char full_path[400]; //full path
 int save_size;
 
 	if (cmpstr_min(revbuf,"gpvdmfile")==0)
 	{
-		printf("%s\n",revbuf);
+		//printf("%s\n",revbuf);
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
 		inp_search_string(&decode,save_name,"#file_name");
+		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
-		printf("found file=%s\n",save_name);
-		join_path(2,full_path,file_store_path,save_name);
 
-		get_dir_name_from_path(dir_name, full_path);
+		struct job* job=NULL;
+		job=jobs_find_job_from_target(target);
+		if (job!=NULL)
+		{
+			join_path(3,full_path,calpath_get_store_path(),job->name,save_name);
+			//printf("full path=%s %s\n",full_path,target);
+			//getchar();
+			get_dir_name_from_path(dir_name, full_path);
 
-		file_rx_and_save(full_path,sock_han,save_size);
+			file_rx_and_save(full_path,sock_han,save_size);
 		return 0;
+		}else
+		{
+			printf("job not found\n");
+		}
 	}
 
 return -1;
