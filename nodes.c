@@ -33,6 +33,21 @@ int i;
 return NULL;
 }
 
+struct node_struct* node_find_master()
+{
+int i;
+	for (i=0;i<nnodes;i++)
+	{
+		if (strcmp(nodes[i].type,"master")==0)
+		{
+			return &(nodes[i]);
+		}
+	}
+
+return NULL;
+}
+
+
 int register_node(int sock,char *node_name)
 {
 printf("send register node\n");
@@ -100,9 +115,8 @@ printf("cmp add node\n");
 		inp_search_string(&decode,host_name,"#node_name");
 		inp_search_int(&decode,&cpus,"#cpus");
 		sprintf(full_host_name,"%s%s",my_ip,host_name);
-		node_add(full_host_name,my_ip,cpus,sock_han);
+		node_add("slave",my_ip,cpus,sock_han);
 		nodes_print();
-		send_file(sock_han,"","node.inp");
 		return 0;
 	}
 
@@ -136,7 +150,7 @@ int i;
 printf("number\tname\tip\t\tcpus\tsock\tload\n");
 	for (i=0;i<nnodes;i++)
 	{
-		printf("%d\t%s\t%s\t%d\t%d\t%d\n",i,nodes[i].name,nodes[i].ip,nodes[i].cpus,nodes[i].sock,nodes[i].load);
+		printf("%d\t%s\t%s\t%d\t%d\t%d\n",i,nodes[i].type,nodes[i].ip,nodes[i].cpus,nodes[i].sock,nodes[i].load);
 	}
 }
 
@@ -145,15 +159,15 @@ void nodes_reset()
 nnodes=0;
 }
 
-int node_add(char *name,char *ip,int cpus, int sock)
+int node_add(char *type,char *ip,int cpus, int sock)
 {
 int i;
 	for (i=0;i<nnodes;i++)
 	{
-		if (strcmp(nodes[i].ip,"none")==0)
+		if ((strcmp(nodes[i].ip,"none")==0)||(strcmp(nodes[i].type,"master")==0))
 		{
 				strcpy(nodes[i].ip,ip);
-				strcpy(nodes[i].name,"name");
+				strcpy(nodes[i].type,type);
 				nodes[i].cpus=cpus;
 				nodes[i].sock=sock;
 				nodes[i].load=0;
@@ -162,7 +176,7 @@ int i;
 	}
 
 	strcpy(nodes[nnodes].ip,ip);
-	strcpy(nodes[nnodes].name,"name");
+	strcpy(nodes[nnodes].type,type);
 	nodes[nnodes].cpus=cpus;
 	nodes[nnodes].sock=sock;
 	nodes[nnodes].load=0;
@@ -210,7 +224,7 @@ nodes_print();
 					join_path(2,full_path,calpath_get_store_path(), next->name);
 
 					send_dir(nodes[i].sock,full_path, 0,calpath_get_store_path());
-					send_command(nodes[i].sock,"pwd;ls;sleep 10;md5sum * >sum ",next->name,next->cpus_needed);
+					send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
 
 					nodes[i].load++;
 					next->status=1;
@@ -239,6 +253,9 @@ int cmp_simfinished(int sock,char *revbuf)
 	char dir_name[200];
 	int cpus=0;
 	char ip[200];
+	char buf[512];
+	char full_dir[200];
+	int ret=0;
 	if (cmpstr_min(revbuf,"gpvdmsimfinished")==0)
 	{
 
@@ -249,6 +266,22 @@ int cmp_simfinished(int sock,char *revbuf)
 		inp_search_string(&decode,dir_name,"#dir_name");
 		inp_search_int(&decode,&cpus,"#cpus");
 		inp_search_string(&decode,ip,"#ip");
+
+		struct node_struct* master=NULL;
+		master=node_find_master();
+		printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		if (master!=NULL)
+		{
+			printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+			join_path(2,full_dir,calpath_get_store_path(), dir_name);
+
+			ret=send_dir(master->sock,full_dir, 0,calpath_get_store_path());
+
+			if (ret!=0)
+			{
+				printf("dir not found %s %s\n",dir_name, calpath_get_store_path());
+			}
+		}
 
 		struct job* job=NULL;
 		job=jobs_find_job(dir_name);
@@ -277,7 +310,7 @@ int i;
 		if (strcmp(nodes[i].ip,ip)==0)
 		{
 			strcpy(nodes[i].ip,"none");
-			strcpy(nodes[i].name,"");
+			strcpy(nodes[i].type,"");
 			nodes[i].cpus=-1;
 			nodes[i].sock=-1;
 			nodes[i].load=0;

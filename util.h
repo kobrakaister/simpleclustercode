@@ -20,12 +20,13 @@ struct job
 struct node_struct
 {
 	char ip[100];
-	char name[100];
+	char type[100];
 	int cpus;
 	int load;
 	int sock;
 };
 
+struct node_struct* node_find_master();
 int cmp_command(int sock_han,char *revbuf);
 int cmp_addnode(int sock_han,char *revbuf);
 void nodes_print();
@@ -43,7 +44,7 @@ int head();
 int node();
 int cmp_rxfile(char *file_store_path,int sock_han,char *revbuf);
 int file_rx_and_save(char *file_name,int sock_han,int size);
-void send_dir(int sockfd,const char *name, int level,char *base_name);
+int send_dir(int sockfd,const char *name, int level,char *base_name);
 int send_file(int sockfd,char *base_name,char *file_name);
 int cmp_addjob(int sock_han,char *revbuf);
 int register_node(int sock, char *node_name);
@@ -64,6 +65,7 @@ void *rx_loop(void *s);
 void run_jobs();
 struct job* get_jobs_array();
 int get_njobs();
+int cmp_register_master(int sock,char *revbuf);
 
 void calpath_set_store_path(char *in);
 char* calpath_get_store_path();

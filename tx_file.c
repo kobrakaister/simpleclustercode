@@ -16,19 +16,19 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-void send_dir(int sockfd,const char *name, int level,char *base_name)
+int send_dir(int sockfd,const char *name, int level,char *base_name)
 {
     DIR *dir;
     struct dirent *entry;
 
     if (!(dir = opendir(name)))
 	{
-        return;
+        return -1;
 	}
 
     if (!(entry = readdir(dir)))
 	{
-        return;
+        return -1;
 	}
 
     do
@@ -53,6 +53,7 @@ void send_dir(int sockfd,const char *name, int level,char *base_name)
     }while (entry = readdir(dir));
 
     closedir(dir);
+return 0;
 }
 
 int send_file(int sockfd,char *base_name,char *file_name)

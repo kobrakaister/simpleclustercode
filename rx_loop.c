@@ -45,6 +45,8 @@ int sock=*((int*)s);
 
 		cmp_simfinished(sock,revbuf);
 
+		cmp_register_master(sock,revbuf);
+
 	}
 
 	bzero(revbuf, LENGTH);
