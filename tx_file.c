@@ -48,7 +48,7 @@ int send_dir(int sockfd,const char *name, int level,char *base_name, char* targe
 			char full_path[500];
 			join_path(2,full_path,name, entry->d_name);
 			send_file(sockfd,base_name, full_path,target);
-			printf("%s\n", full_path);
+			//printf("%s\n", full_path);
 		}
     }while (entry = readdir(dir));
 

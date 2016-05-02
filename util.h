@@ -15,6 +15,8 @@ struct job
 	int status;
 	int cpus_needed;
 	char target[100];
+	char ip[100];
+	int copy_state;
 };
 
 
@@ -27,7 +29,12 @@ struct node_struct
 	int sock;
 };
 
+
+int cmp_node_send_data(int sock,char *revbuf);
+int cmp_get_data(int sock,char *revbuf);
+
 struct node_struct* node_find_master();
+struct node_struct* node_find(char *ip);
 int cmp_command(int sock_han,char *revbuf);
 int cmp_addnode(int sock_han,char *revbuf);
 void nodes_print();
@@ -64,6 +71,13 @@ int close_all_open();
 int broadcast_to_nodes(int sock,char *command);
 int cmp_node_killall(int sock,char *revbuf);
 int cmp_head_killall(int sock,char *revbuf);
+int cmp_node_sleep(int sock,char *revbuf);
+int cmp_head_sleep(int sock,char *revbuf);
+int cmp_node_poweroff(int sock,char *revbuf);
+int cmp_head_poweroff(int sock,char *revbuf);
+int cmp_sendnodelist(int sock,char *revbuf);
+int nodes_txnodelist();
+
 
 
 void jobs_print();
@@ -74,7 +88,6 @@ void run_jobs();
 struct job* get_jobs_array();
 int get_njobs();
 int cmp_register_master(int sock,char *revbuf);
-struct job* jobs_find_job_from_target(char *target);
 
 void calpath_set_store_path(char *in);
 char* calpath_get_store_path();

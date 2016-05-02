@@ -16,66 +16,102 @@
 #include "inp.h"
 
 
-int broadcast_getdata(int sockfd,char *command,char *dir_name,int cpus)
+int cmp_node_send_data(int sock,char *revbuf)
 {
-
-    char sdbuf[LENGTH]; // Receiver buffer
-
-	bzero(sdbuf, LENGTH);
-
-	sprintf(sdbuf,"gpvdmcommand\n#command\n%s\n#dir_name\n%s\n#cpus\n%d\n#end",command,dir_name,cpus);
-
-    if(send(sockfd, sdbuf, LENGTH, 0) < 0)
-    {
-		printf("%s\n", strerror(errno));
-	    return -1;
-    }
-
-return 0;
-}
-
-int cmp_command(int sock,char *revbuf)
-{
-	char command[200];
-	char dir_name[200];
-	char buf[LENGTH];
-	int cpus=0;
-	if (cmpstr_min(revbuf,"gpvdmcommand")==0)
+	int njobs=0;
+	struct job* jobs=NULL;
+	char buf[512];
+	char job_name[100];
+	char full_path[200];
+	int state_changed=FALSE;
+	if (cmpstr_min(revbuf,"gpvdmnodesenddata")==0)
 	{
 
 		struct inp_file decode;
-		printf("revbuf='%s' %d\n",revbuf,cmpstr_min(revbuf,"gpvdmcommand"));
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,command,"#command");
-		inp_search_string(&decode,dir_name,"#dir_name");
-		inp_search_int(&decode,&cpus,"#cpus");
-		printf("I will run %s\n",command);
-		if (fork()==0)
+		inp_search_string(&decode,job_name,"#job");
+
+		join_path(2,full_path,calpath_get_store_path(), job_name);
+
+		printf("sending dir %s\n",full_path);
+		send_dir(sock,full_path, 0,full_path,job_name);
+
+
+		char buf[512];
+		bzero(buf, LENGTH);
+
+		sprintf(buf,"gpvdmgetdata\n");
+		if(send(sock, buf, LENGTH, 0) < 0)
 		{
-
-			char sim_dir[200];
-			join_path(2,sim_dir,calpath_get_store_path(), dir_name);
-			printf("change dir to %s\n",sim_dir);
-			chdir(sim_dir);
-
-			system(command);
-			
-			bzero(buf, LENGTH);
-
-
-			send_dir(sock,sim_dir, 0,calpath_get_store_path());
-
-			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
-
-			if(send(sock, buf, LENGTH, 0) < 0)
-			{
-				printf("%s\n", strerror(errno));
-				return -1;
-			}
-			exit(0);
+			printf("%s\n", strerror(errno));
+			return -1;
 		}
+
+	}
+
+return -1;
+}
+
+
+int cmp_get_data(int sock,char *revbuf)
+{
+	int i=0;
+	int njobs=0;
+	struct job* jobs=NULL;
+	char buf[512];
+	char full_path[512];
+	int state_changed=FALSE;
+	if (cmpstr_min(revbuf,"gpvdmgetdata")==0)
+	{
+		printf("check getdata gpvdmgetdata\n");
+
+		jobs=get_jobs_array();
+		njobs=get_njobs();
+		
+		for (i=0;i<njobs;i++)
+		{
+			if ((jobs[i].copy_state==0)&&(jobs[i].status>0))
+			{
+
+				struct node_struct* job_node=NULL;
+				job_node=node_find(jobs[i].ip);
+				bzero(buf, LENGTH);
+
+				sprintf(buf,"gpvdmnodesenddata\n#job\njob%d\n#end",i);
+				if(send(job_node->sock, buf, LENGTH, 0) < 0)
+				{
+					printf("%s\n", strerror(errno));
+					return -1;
+				}
+
+				state_changed=TRUE;
+				jobs[i].copy_state=1;
+				break;
+			}
+		}
+
+		if (state_changed==FALSE)
+		{
+			for (i=0;i<njobs;i++)
+			{
+				jobs[i].copy_state=0;
+			}
+			jobs_print();
+			printf("Got all data from nodes\n");
+
+
+			for (i=0;i<njobs;i++)
+			{
+				join_path(2,full_path,calpath_get_store_path(), jobs[i].name);
+				printf("tx to %s %s\n",full_path,jobs[i].target);
+				struct node_struct* master=NULL;
+				master=node_find_master();
+				send_dir(master->sock,full_path, 0,full_path,jobs[i].target);
+
+			}
+		}		
 	}
 
 return -1;

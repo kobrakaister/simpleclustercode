@@ -105,6 +105,12 @@ cal_my_ip(interface);
 
 		cmp_node_killall(sockfd,revbuf);
 
+		cmp_node_sleep(sockfd,revbuf);
+
+		cmp_node_poweroff(sockfd,revbuf);
+
+		cmp_node_send_data(sockfd,revbuf);
+
 		if(f_block_sz < 0)
 		{
 			printf(" %s\n", strerror(errno));

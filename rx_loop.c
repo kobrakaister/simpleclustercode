@@ -48,6 +48,15 @@ int sock=*((int*)s);
 		cmp_register_master(sock,revbuf);
 
 		cmp_head_killall(sock,revbuf);
+
+		cmp_head_sleep(sock,revbuf);
+
+		cmp_head_poweroff(sock,revbuf);
+
+		cmp_sendnodelist(sock,revbuf);
+
+		cmp_get_data(sock,revbuf);
+
 	}
 
 	bzero(revbuf, LENGTH);

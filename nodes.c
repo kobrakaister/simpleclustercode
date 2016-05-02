@@ -77,7 +77,7 @@ return NULL;
 
 int register_node(int sock,char *node_name)
 {
-printf("send register node\n");
+//printf("send register node\n");
 char sdbuf[LENGTH]; // Receiver buffer
 int cpus;
 
@@ -117,7 +117,7 @@ int i;
 
 int send_delete_node(int sock)
 {
-printf("send deregister node\n");
+//printf("send deregister node\n");
 char sdbuf[LENGTH]; // Receiver buffer
 int cpus;
 
@@ -192,6 +192,59 @@ printf("number\tname\tip\t\tcpus\tsock\tload\n");
 	}
 }
 
+int cmp_sendnodelist(int sock,char *revbuf)
+{
+//printf("test send list %s\n",revbuf);
+	if (cmpstr_min(revbuf,"gpvdmsendnodelist")==0)
+	{
+		printf("send list\n");
+		nodes_txnodelist();
+		return 0;
+	}
+
+return -1;
+}
+
+int nodes_txnodelist()
+{
+	char buf[LENGTH];
+	char temp[50];
+	int i;
+
+	struct node_struct* master=NULL;
+	master=node_find_master();
+
+	if (master!=NULL)
+	{
+		bzero(buf, LENGTH);
+
+		sprintf(buf,"gpvdmnodelist\n");
+
+		if(send(master->sock, buf, LENGTH, 0) < 0)
+		{
+			printf("%s\n", strerror(errno));
+			return -1;
+		}
+
+		bzero(buf, LENGTH);
+
+
+		for (i=0;i<nnodes;i++)
+		{
+			sprintf(temp,"%s:%d:%d\n",nodes[i].ip,nodes[i].cpus,nodes[i].load);
+			strcat(buf,temp);
+		}
+
+		if(send(master->sock, buf, LENGTH, 0) < 0)
+		{
+			printf("%s\n", strerror(errno));
+			return -1;
+		}
+	}
+
+return 0;
+}
+
 void nodes_reset()
 {
 nnodes=0;
@@ -227,16 +280,16 @@ pthread_mutex_t lock;
 
 void run_jobs(int sock)
 {
-printf("run jobs1\n");
+//printf("run jobs1\n");
 pthread_mutex_lock(&lock);
-printf("run jobs2\n");
+//printf("run jobs2\n");
 
 if (nnodes==0)
 {
 	printf("Warning no nodes!!!!!!!!!!!\n");
 }
 int i;
-printf("run jobs3\n");
+//printf("run jobs3\n");
 
 nodes_print();
 	struct job* next=NULL;
@@ -262,8 +315,9 @@ nodes_print();
 					join_path(2,full_path,calpath_get_store_path(), next->name);
 
 					send_dir(nodes[i].sock,full_path, 0,calpath_get_store_path(),"");
-					send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
-
+					//send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
+					send_command(nodes[i].sock,"ls;sleep 30; ll ",next->name,next->cpus_needed);
+					strcpy(next->ip,nodes[i].ip);
 					nodes[i].load++;
 					next->status=1;
 					nodes_print();
@@ -282,7 +336,7 @@ nodes_print();
 	}
 	while(1);
 pthread_mutex_unlock(&lock);
-printf("run jobs4\n");
+//printf("run jobs4\n");
 
 }
 
@@ -319,13 +373,13 @@ int cmp_simfinished(int sock,char *revbuf)
 
 		struct node_struct* master=NULL;
 		master=node_find_master();
-		printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		//printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		if (master!=NULL)
 		{
 			struct job* my_job=jobs_find_job(dir_name);
 			if (my_job!=NULL)
 			{
-				printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",dir_name);
+				//printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",dir_name);
 
 				join_path(2,full_dir,calpath_get_store_path(), dir_name);
 
@@ -384,7 +438,7 @@ int i;
 
 	for (i=0;i<nnodes;i++)
 	{
-		printf("cmp='%s' '%s'\n",ip,nodes[i].ip);
+		//printf("cmp='%s' '%s'\n",ip,nodes[i].ip);
 		if (strcmp(nodes[i].ip,ip)==0)
 		{
 			strcpy(nodes[i].ip,"none");

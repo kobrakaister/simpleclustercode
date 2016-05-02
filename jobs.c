@@ -42,11 +42,11 @@ void jobs_print()
 {
 int i;
 
-printf("n\tname\tdone\tstatus\ttarget\n");
+printf("n\tname\tdone\tstatus\ttarget\t\t\t\t\tip\tcopystate\n");
 
 	for (i=0;i<njobs;i++)
 	{
-		printf("%d\t%s\t%d\t%d\t%s\n",i,jobs[i].name,jobs[i].done,jobs[i].status,jobs[i].target);
+		printf("%d\t%s\t%d\t%d\t%s\t%s\t%d\n",i,jobs[i].name,jobs[i].done,jobs[i].status,jobs[i].target,jobs[i].ip,jobs[i].copy_state);
 	}
 }
 
@@ -73,8 +73,10 @@ void jobs_add(char *name,char *target)
 {
 	strcpy(jobs[njobs].name,name);
 	strcpy(jobs[njobs].target,target);
+	strcpy(jobs[njobs].ip,"");
 	jobs[njobs].done=FALSE;
 	jobs[njobs].status=0;
+	jobs[njobs].copy_state=0;
 	jobs[njobs].cpus_needed=1;
 	njobs++;
 }
@@ -104,27 +106,25 @@ int finished=0;
 return 100.0*((double)finished)/((double)njobs);
 }
 
-struct job* jobs_find_job(char *name)
+struct job* jobs_find_job(char *target)
 {
 int i=0;
-
-	for (i=0;i<njobs;i++)
-	{
-		if (strcmp(jobs[i].name,name)==0)
-		{
-			return &(jobs[i]);
-		}
-	}
-return NULL;
+if (strcmp(target,"")==0)
+{
+	return NULL;
 }
-
-struct job* jobs_find_job_from_target(char *target)
-{
-int i=0;
 
 	for (i=0;i<njobs;i++)
 	{
 		if (strcmp(jobs[i].target,target)==0)
+		{
+			return &(jobs[i]);
+		}
+	}
+
+	for (i=0;i<njobs;i++)
+	{
+		if (strcmp(jobs[i].name,target)==0)
 		{
 			return &(jobs[i]);
 		}

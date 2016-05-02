@@ -32,13 +32,13 @@ int save_size;
 		inp_search_string(&decode,save_name,"#file_name");
 		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
-
+		//printf("'%s' '%s'\n",save_name,target);
 		struct job* job=NULL;
-		job=jobs_find_job_from_target(target);
+		job=jobs_find_job(target);
 		if (job!=NULL)
 		{
 			join_path(3,full_path,calpath_get_store_path(),job->name,save_name);
-			//printf("full path=%s %s\n",full_path,target);
+			printf("full path=%s %s\n",full_path,target);
 			//getchar();
 			get_dir_name_from_path(dir_name, full_path);
 
@@ -46,7 +46,7 @@ int save_size;
 		return 0;
 		}else
 		{
-			printf("job not found\n");
+			printf("job for target '%s' not found\n",target);
 		}
 	}
 
