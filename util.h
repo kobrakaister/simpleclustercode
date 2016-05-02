@@ -25,7 +25,6 @@
 
 #define BACKLOG 10
 #define LENGTH 512 // Buffer length
-#define PORT 50002
 
 struct job
 {
@@ -54,7 +53,7 @@ int cmp_get_data(int sock,char *revbuf);
 
 struct node_struct* node_find_master();
 struct node_struct* node_find(char *ip);
-int cmp_command(int sock_han,char *revbuf);
+int cmp_node_runjob(int sock_han,char *revbuf);
 int cmp_addnode(int sock_han,char *revbuf);
 void nodes_print();
 int node_add(char *name,char *ip, int cpus,int sock);
@@ -81,7 +80,7 @@ struct job* jobs_get_next();
 int send_command(int sockfd,char *command,char *dir_name,int cpus);
 int cmp_simfinished(int sock,char *revbuf);
 char* get_my_ip();
-int cal_my_ip(char *interface);
+int cal_my_ip(int sock);
 int get_ip_from_sock(char *out,int sock);
 double jobs_cal_percent_finished();
 int jobs_remaining();
@@ -96,8 +95,10 @@ int cmp_node_poweroff(int sock,char *revbuf);
 int cmp_head_poweroff(int sock,char *revbuf);
 int cmp_sendnodelist(int sock,char *revbuf);
 int nodes_txnodelist();
-
-
+int cmp_head_exe(int sock,char *revbuf);
+void remove_dir(char* dir_name);
+int isdir(char *dir);
+void copy_dir_to_all_nodes(char *dir);
 
 void jobs_print();
 void jobs_reset();
@@ -107,6 +108,7 @@ void run_jobs();
 struct job* get_jobs_array();
 int get_njobs();
 int cmp_register_master(int sock,char *revbuf);
+int cmp_clean(int sock,char *revbuf);
 
 void calpath_set_store_path(char *in);
 char* calpath_get_store_path();

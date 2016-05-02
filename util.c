@@ -31,7 +31,7 @@
 #include <linux/limits.h>
 #include <sys/stat.h>
 
-/*void remove_dir(char* dir_name)
+void remove_dir(char* dir_name)
 {
 
 struct dirent *next_file;
@@ -52,7 +52,7 @@ char filepath[256];
 				join_path(2, filepath,dir_name,next_file->d_name);
 				if (isdir(filepath)==0)
 				{
-					remove_dir(sim,filepath);
+					remove_dir(filepath);
 					#ifdef windows
 						RemoveDirectory(filepath);
 					#else
@@ -71,7 +71,7 @@ char filepath[256];
 //}
 
 
-}*/
+}
 
 int check_int(char *in)
 {

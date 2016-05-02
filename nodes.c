@@ -297,6 +297,28 @@ return 0;
 
 pthread_mutex_t lock;
 
+void copy_dir_to_all_nodes(char *dir)
+{
+printf("copy_dir_to_all_nodes\n");
+int i=0;
+		for (i=0;i<nnodes;i++)
+		{
+			if (strcmp(nodes[i].ip,"none")!=0)
+			{
+				if (strcmp(nodes[i].type,"slave")==0)
+				{
+					char full_path[200];
+
+					join_path(2,full_path,calpath_get_store_path(), dir);
+					printf("sending dir %s to %s\n",dir,nodes[i].ip);
+					printf("Send to %s\n",full_path);
+					send_dir(nodes[i].sock,full_path, 0,full_path,dir);
+
+				}
+			}
+		}
+}
+
 void run_jobs(int sock)
 {
 //printf("run jobs1\n");
@@ -311,6 +333,7 @@ int i;
 //printf("run jobs3\n");
 
 nodes_print();
+printf("here xxx\n");
 	struct job* next=NULL;
 	do
 	{
@@ -327,22 +350,25 @@ nodes_print();
 		{
 			if (strcmp(nodes[i].ip,"none")!=0)
 			{
-				if (nodes[i].load<nodes[i].cpus)
+				if (strcmp(nodes[i].type,"slave")==0)
 				{
-					char full_path[200];
-					printf("sending job to %s\n",nodes[i].ip);
-					join_path(2,full_path,calpath_get_store_path(), next->name);
+					if (nodes[i].load<nodes[i].cpus)
+					{
+						char full_path[200];
+						printf("sending job to %s\n",nodes[i].ip);
+						join_path(2,full_path,calpath_get_store_path(), next->name);
 
-					send_dir(nodes[i].sock,full_path, 0,calpath_get_store_path(),"");
-					//send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
-					send_command(nodes[i].sock,"ls;sleep 30; ll ",next->name,next->cpus_needed);
-					strcpy(next->ip,nodes[i].ip);
-					nodes[i].load++;
-					next->status=1;
-					nodes_print();
-					jobs_print();
-					sent_job=TRUE;
-					break;
+						send_dir(nodes[i].sock,full_path, 0,full_path,next->name);
+						//send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
+						send_command(nodes[i].sock,"ls;sleep 30; ll ",next->name,next->cpus_needed);
+						strcpy(next->ip,nodes[i].ip);
+						nodes[i].load++;
+						next->status=1;
+						nodes_print();
+						jobs_print();
+						sent_job=TRUE;
+						break;
+					}
 				}
 			}
 		}
@@ -382,13 +408,25 @@ int cmp_simfinished(int sock,char *revbuf)
 		job=jobs_find_job(dir_name);
 		if (job!=NULL)
 		{
+
 			job->status=2;
+
 			jobs_print();
+
 			run_jobs(sock);
+
 			struct node_struct* node=NULL;
+
 			node=node_find(ip);
+			if (node==NULL)
+			{
+				printf("I can't find IP %s\n",ip);
+			}
+
 			node->load-=cpus;
 		}
+
+
 
 		struct node_struct* master=NULL;
 		master=node_find_master();
@@ -415,6 +453,7 @@ int cmp_simfinished(int sock,char *revbuf)
 				printf("Can't find job %s\n",dir_name);
 				jobs_print();
 			}
+	printf("here5\n");
 
 			bzero(buf, LENGTH);
 
@@ -441,6 +480,7 @@ int cmp_simfinished(int sock,char *revbuf)
 
 				jobs_clear_all();
 			}
+	printf("here6\n");
 
 
 		}

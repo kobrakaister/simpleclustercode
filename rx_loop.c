@@ -40,10 +40,10 @@ int sock=*((int*)s);
 	int f_block_sz = 0;
     char revbuf[LENGTH];
 
-	while(f_block_sz = recv(sock, revbuf, LENGTH, 0))
+	while(f_block_sz = recv(sock, revbuf, LENGTH, MSG_WAITALL))
 	{
 
-
+		printf("block_size=%d\n",f_block_sz);
 		if(f_block_sz < 0)
 		{
 			printf("here %s\n", strerror(errno));
@@ -57,8 +57,6 @@ int sock=*((int*)s);
 		cmp_addnode(sock,revbuf);
 
 		cmp_deletenode(sock,revbuf);
-
-		cmp_command(sock,revbuf);
 
 		cmp_runjobs(sock,revbuf);
 
@@ -76,6 +74,9 @@ int sock=*((int*)s);
 
 		cmp_get_data(sock,revbuf);
 
+		cmp_head_exe(sock,revbuf);
+
+		cmp_clean(sock,revbuf);
 	}
 
 	bzero(revbuf, LENGTH);

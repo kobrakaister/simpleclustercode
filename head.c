@@ -48,7 +48,6 @@ int head ()
 
 int port=0;
 char file_store_path[200];
-char ip[20];
 char interface[400]; //full path
 struct inp_file inp;
 inp_init(&inp);
@@ -59,7 +58,6 @@ if (inp_load(&inp,"head.inp")!=0)
 }
 inp_check(&inp,1.0);
 inp_search_int(&inp,&port,"#port");
-inp_search_string(&inp,ip,"#ip");
 inp_search_string(&inp,file_store_path,"#file_store");
 inp_search_string(&inp,interface,"#interface");
 inp_free(&inp);

@@ -32,7 +32,8 @@
 #include "util.h"
 #include <sys/ioctl.h>
 #include <net/if.h>
-
+#include <sys/stat.h>
+static int count=0;
 int cmp_rxfile(int sock_han,char *revbuf)
 {
 char save_name[200];
@@ -41,7 +42,7 @@ char dir_name[400];
 char target[400];
 char full_path[400]; //full path
 int save_size;
-
+int stat_value;
 	if (cmpstr_min(revbuf,"gpvdmfile")==0)
 	{
 		//printf("%s\n",revbuf);
@@ -51,22 +52,40 @@ int save_size;
 		inp_search_string(&decode,save_name,"#file_name");
 		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
+		inp_search_int(&decode,&stat_value,"#stat");
 		//printf("'%s' '%s'\n",save_name,target);
 		struct job* job=NULL;
+		char dest[200];
 		job=jobs_find_job(target);
 		if (job!=NULL)
 		{
-			join_path(3,full_path,calpath_get_store_path(),job->name,save_name);
-			printf("full path=%s %s\n",full_path,target);
-			//getchar();
-			get_dir_name_from_path(dir_name, full_path);
-
-			file_rx_and_save(full_path,sock_han,save_size);
-		return 0;
+			strcpy(dest,job->name);
+		}else
+		if (strcmp(target,"")!=0)
+		{
+			strcpy(dest,target);
 		}else
 		{
-			printf("job for target '%s' not found\n",target);
+			printf("job for target '%s' not found\n",revbuf);
+			return -1;
 		}
+
+		join_path(3,full_path,calpath_get_store_path(),dest,save_name);
+		
+		printf("full path=%s %s %d\n",full_path,target,count);
+
+		count++;
+
+		get_dir_name_from_path(dir_name, full_path);
+
+		file_rx_and_save(full_path,sock_han,save_size);
+
+		if (stat_value!=0)
+		{
+			chmod(full_path,stat_value);
+		}
+		return 0;
+		
 	}
 
 return -1;
@@ -96,9 +115,9 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 	}
 
 	written=0;
-	while(f_block_sz = recv(sock_han, revbuf, LENGTH, 0))
+	while(f_block_sz = recv(sock_han, revbuf, LENGTH, MSG_WAITALL))
 	{
-
+		//printf("rx in=%d",f_block_sz);
 		int left=size-written;
 		if (left<LENGTH)
 		{
@@ -126,6 +145,11 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 		if (written==size)
 		{
 			break;
+		}
+
+		if (written>size)
+		{
+			printf("omg wtf!!!\n");
 		}
 		bzero(revbuf, LENGTH);
 	}

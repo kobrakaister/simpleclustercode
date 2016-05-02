@@ -39,9 +39,11 @@ static int nnodes=0;
 
 int cmp_runjobs(int sock_han,char *revbuf)
 {
+
 	char command[200];
 	if (cmpstr_min(revbuf,"gpvdmrunjobs")==0)
 	{
+		copy_dir_to_all_nodes("src");
 		run_jobs();
 	}
 

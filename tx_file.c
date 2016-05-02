@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include "util.h"
+#include <sys/stat.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -61,7 +62,7 @@ int send_dir(int sockfd,const char *name, int level,char *base_name, char* targe
 			{
                 continue;
 			}
-            send_dir(sockfd,path, level + 1,base_name,"");
+            send_dir(sockfd,path, level + 1,base_name,target);
         }else
         {
 			char full_path[500];
@@ -96,7 +97,7 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 	buf=(char*)malloc(sizeof(char)*packet_size);
 	bzero(buf, packet_size);
 	//printf("gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#end",rel_name,results.st_size,target);
-	sprintf(buf,"gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#end",rel_name,results.st_size,target);
+	sprintf(buf,"gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#stat\n%d\n#end",rel_name,results.st_size,target,results.st_mode);
 
 	if (results.st_size>0)
 	{

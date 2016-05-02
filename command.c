@@ -55,7 +55,7 @@ int send_command(int sockfd,char *command,char *dir_name,int cpus)
 return 0;
 }
 
-int cmp_command(int sock,char *revbuf)
+int cmp_node_runjob(int sock,char *revbuf)
 {
 	char command[200];
 	char dir_name[200];
@@ -95,6 +95,39 @@ int cmp_command(int sock,char *revbuf)
 				printf("%s\n", strerror(errno));
 				return -1;
 			}
+			 _exit(EXIT_SUCCESS);
+		}
+	}
+
+return -1;
+}
+
+int cmp_head_exe(int sock,char *revbuf)
+{
+	char command[200];
+	char dir_name[200];
+	char buf[LENGTH];
+	int cpus=0;
+	if (cmpstr_min(revbuf,"gpvdmheadex")==0)
+	{
+		struct inp_file decode;
+		inp_init(&decode);
+		decode.data=revbuf;
+		decode.fsize=strlen(revbuf);
+		inp_search_string(&decode,dir_name,"#dir");
+		inp_search_string(&decode,command,"#command");
+
+		printf("I will run %s\n",command);
+		if (fork()==0)
+		{
+
+			char sim_dir[200];
+			join_path(2,sim_dir,calpath_get_store_path(), dir_name);
+			printf("change dir to %s\n",sim_dir);
+			chdir(sim_dir);
+
+			system(command);
+
 			 _exit(EXIT_SUCCESS);
 		}
 	}

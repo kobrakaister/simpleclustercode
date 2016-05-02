@@ -52,7 +52,8 @@ char node_name[100];
 char store_path[200];
 char temp_path[200];
 char interface[200];
-
+char master_ip[200];
+int port=0;
 struct inp_file inp;
 inp_init(&inp);
 if (inp_load(&inp,"node.inp")!=0)
@@ -64,10 +65,12 @@ inp_check(&inp,1.0);
 inp_search_string(&inp,node_name,"#node_name");
 inp_search_string(&inp,temp_path,"#store_path");
 inp_search_string(&inp,interface,"#interface");
+inp_search_string(&inp,master_ip,"#master_ip");
+inp_search_int(&inp,&port,"#port");
 inp_free(&inp);
 realpath(temp_path, store_path);
 calpath_set_store_path(store_path);
-cal_my_ip(interface);
+
 
     int sockfd; // Socket file descriptor
     int sin_size; // to store struct size
@@ -83,8 +86,8 @@ cal_my_ip(interface);
     }
     /* Fill the socket address struct */
     remote_addr.sin_family = AF_INET; 
-    remote_addr.sin_port = htons(PORT); 
-    inet_pton(AF_INET, "127.0.0.1", &remote_addr.sin_addr); 
+    remote_addr.sin_port = htons(port); 
+    inet_pton(AF_INET, master_ip, &remote_addr.sin_addr); 
     bzero(&(remote_addr.sin_zero), 8);
 
     if (connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr)) == -1)
@@ -94,7 +97,7 @@ cal_my_ip(interface);
     }
     else
 	{
-		printf("client: Connected to server at port %d...ok!\n", PORT);
+		printf("client: Connected to server at port %d...ok!\n", port);
 	}
 
 
@@ -111,14 +114,17 @@ cal_my_ip(interface);
 
 	global_sock=sockfd;
 
+	cal_my_ip(sockfd);
+
 	register_node(sockfd,node_name);
+
 
 	while(f_block_sz = recv(sockfd, revbuf, LENGTH, 0))
 	{
 
 		//printf("%s\n",revbuf);
 
-		cmp_command(sockfd,revbuf);
+		cmp_node_runjob(sockfd,revbuf);
 
 		cmp_rxfile(sockfd,revbuf);
 
