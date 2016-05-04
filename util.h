@@ -48,6 +48,10 @@ struct node_struct
 };
 
 
+void calpath_set_exe_name(char *in);
+char* calpath_get_exe_name();
+int send_all(int sock, void *buffer, int length);
+
 int cmp_node_send_data(int sock,char *revbuf);
 int cmp_get_data(int sock,char *revbuf);
 

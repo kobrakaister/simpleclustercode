@@ -35,9 +35,22 @@
 #include<pthread.h>
 
 static char file_store_path[200];
+
+static char exe_path[200];
+
 void calpath_set_store_path(char *in)
 {
 	strcpy(file_store_path,in);
+}
+
+void calpath_set_exe_name(char *in)
+{
+	strcpy(exe_path,in);
+}
+
+char* calpath_get_exe_name()
+{
+	return exe_path;
 }
 
 char* calpath_get_store_path()

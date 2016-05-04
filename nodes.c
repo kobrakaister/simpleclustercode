@@ -54,7 +54,7 @@ sprintf(buf,"%s",command);
 		if (strcmp(nodes[i].type,"slave")==0)
 		{
 			printf("broadcast to %s\n",nodes[i].type);
-			if(send(nodes[i].sock, buf, LENGTH, 0) < 0)
+			if(send_all(nodes[i].sock, buf, LENGTH) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;
@@ -113,7 +113,7 @@ int cpus;
 
 	sprintf(sdbuf,"gpvdmaddnode\n#node_name\n%s\n#cpus\n%d\n#ver\n#1.0\n#end",node_name,cpus);
 
-	if(send(sock, sdbuf, LENGTH, 0) < 0)
+	if(send_all(sock, sdbuf, LENGTH) < 0)
 	{
 		printf("%s\n", strerror(errno));
 		return -1;
@@ -146,7 +146,7 @@ int cpus;
 
 	sprintf(sdbuf,"gpvddeletenode");
 
-	if(send(sock, sdbuf, LENGTH, 0) < 0)
+	if(send_all(sock, sdbuf, LENGTH) < 0)
 	{
 		printf("%s\n", strerror(errno));
 		return -1;
@@ -239,7 +239,7 @@ int nodes_txnodelist()
 
 		sprintf(buf,"gpvdmnodelist\n");
 
-		if(send(master->sock, buf, LENGTH, 0) < 0)
+		if(send_all(master->sock, buf, LENGTH) < 0)
 		{
 			printf("%s\n", strerror(errno));
 			return -1;
@@ -254,7 +254,7 @@ int nodes_txnodelist()
 			strcat(buf,temp);
 		}
 
-		if(send(master->sock, buf, LENGTH, 0) < 0)
+		if(send_all(master->sock, buf, LENGTH) < 0)
 		{
 			printf("%s\n", strerror(errno));
 			return -1;
@@ -359,8 +359,8 @@ printf("here xxx\n");
 						join_path(2,full_path,calpath_get_store_path(), next->name);
 
 						send_dir(nodes[i].sock,full_path, 0,full_path,next->name);
-						//send_command(nodes[i].sock,"/home/rod/test/280416/go.o ",next->name,next->cpus_needed);
-						send_command(nodes[i].sock,"ls;sleep 30; ll ",next->name,next->cpus_needed);
+
+						send_command(nodes[i].sock,calpath_get_exe_name(),next->name,next->cpus_needed);
 						strcpy(next->ip,nodes[i].ip);
 						nodes[i].load++;
 						next->status=1;
@@ -423,7 +423,10 @@ int cmp_simfinished(int sock,char *revbuf)
 				printf("I can't find IP %s\n",ip);
 			}
 
+			printf("load was %d %s \n",node->load,dir_name);
 			node->load-=cpus;
+			printf("load now %d %s\n",node->load,dir_name);
+			jobs_print();
 		}
 
 
@@ -459,7 +462,7 @@ int cmp_simfinished(int sock,char *revbuf)
 
 			sprintf(buf,"gpvdmpercent\n#percent\n%lf\n#end",jobs_cal_percent_finished());
 
-			if(send(master->sock, buf, LENGTH, 0) < 0)
+			if(send_all(master->sock, buf, LENGTH) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;
@@ -472,13 +475,13 @@ int cmp_simfinished(int sock,char *revbuf)
 
 				sprintf(buf,"gpvdmfinished\n");
 
-				if(send(master->sock, buf, LENGTH, 0) < 0)
+				if(send_all(master->sock, buf, LENGTH) < 0)
 				{
 					printf("%s\n", strerror(errno));
 					return -1;
 				}
 
-				jobs_clear_all();
+				//jobs_clear_all();
 			}
 	printf("here6\n");
 

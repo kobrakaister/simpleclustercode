@@ -119,7 +119,7 @@ calpath_set_store_path(store_path);
 	register_node(sockfd,node_name);
 
 
-	while(f_block_sz = recv(sockfd, revbuf, LENGTH, 0))
+	while(f_block_sz = recv(sockfd, revbuf, LENGTH, MSG_WAITALL))
 	{
 
 		//printf("%s\n",revbuf);

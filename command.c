@@ -44,9 +44,9 @@ int send_command(int sockfd,char *command,char *dir_name,int cpus)
 
 	bzero(sdbuf, LENGTH);
 
-	sprintf(sdbuf,"gpvdmcommand\n#command\n%s\n#dir_name\n%s\n#cpus\n%d\n#end",command,dir_name,cpus);
+	sprintf(sdbuf,"gpvdmcommand\n#exe_name\n%s\n#dir_name\n%s\n#cpus\n%d\n#end",command,dir_name,cpus);
 
-    if(send(sockfd, sdbuf, LENGTH, 0) < 0)
+    if(send_all(sockfd, sdbuf, LENGTH) < 0)
     {
 		printf("%s\n", strerror(errno));
 	    return -1;
@@ -57,7 +57,7 @@ return 0;
 
 int cmp_node_runjob(int sock,char *revbuf)
 {
-	char command[200];
+	char exe_name[200];
 	char dir_name[200];
 	char buf[LENGTH];
 	int cpus=0;
@@ -69,10 +69,10 @@ int cmp_node_runjob(int sock,char *revbuf)
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,command,"#command");
+		inp_search_string(&decode,exe_name,"#exe_name");
 		inp_search_string(&decode,dir_name,"#dir_name");
 		inp_search_int(&decode,&cpus,"#cpus");
-		printf("I will run %s\n",command);
+		printf("I will run %s\n",exe_name);
 		if (fork()==0)
 		{
 
@@ -81,16 +81,23 @@ int cmp_node_runjob(int sock,char *revbuf)
 			printf("change dir to %s\n",sim_dir);
 			chdir(sim_dir);
 
-			system(command);
+			char full_exe_path[200];
+			join_path(3,full_exe_path,calpath_get_store_path(), "src",exe_name);
+
+			printf("full command =%s\n",full_exe_path);
+			system(full_exe_path);
 			
 			bzero(buf, LENGTH);
 
 
-			send_dir(sock,sim_dir, 0,calpath_get_store_path(),"");
+			//send_dir(sock, sim_dir, 0, sim_dir, dir_name);
+
+			//printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+			printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! %s\n",dir_name);
 
 			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
 
-			if(send(sock, buf, LENGTH, 0) < 0)
+			if(send_all(sock, buf, LENGTH) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;

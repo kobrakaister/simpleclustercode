@@ -142,4 +142,6 @@ calpath_set_store_path(file_store_path);
      
     }
 
+printf("Exiting cluster code\n");
+
 }

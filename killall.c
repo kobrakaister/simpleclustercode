@@ -49,7 +49,8 @@ int cmp_head_killall(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmkillall")==0)
 	{
-		broadcast_to_nodes(sock,"gpvdmnodekillall");
+		copy_dir_to_all_nodes("src");
+		//broadcast_to_nodes(sock,"gpvdmnodekillall");
 	}
 
 return -1;

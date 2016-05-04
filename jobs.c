@@ -133,7 +133,7 @@ if (strcmp(target,"")==0)
 	return NULL;
 }
 
-	for (i=0;i<njobs;i++)
+	for (i=njobs-1;i>=0;i--)
 	{
 		if (strcmp(jobs[i].target,target)==0)
 		{
@@ -141,7 +141,7 @@ if (strcmp(target,"")==0)
 		}
 	}
 
-	for (i=0;i<njobs;i++)
+	for (i=njobs-1;i>=0;i--)
 	{
 		if (strcmp(jobs[i].name,target)==0)
 		{

@@ -47,15 +47,15 @@ int cmp_register_master(int sock,char *revbuf)
 	if (cmpstr_min(revbuf,"gpvdmregistermaster")==0)
 	{
 
-		//printf( "address is %s:%u\n",, (unsigned)ntohs(adr_inet.sin_port));
-		get_ip_from_sock(my_ip,sock);
 
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
+		get_ip_from_sock(my_ip,sock);
+		printf( "register %s\n",my_ip);
+		//inp_init(&decode);
+		//decode.data=revbuf;
+		//decode.fsize=strlen(revbuf);
 		node_add("master",my_ip,0,sock);
-		strcpy(buf,"hello!!!!!\n");
-		send(sock, buf, LENGTH, 0);
+		//strcpy(buf,"hello!!!!!\n");
+		//send_all(sock, buf, LENGTH);
 		return 0;
 	}
 

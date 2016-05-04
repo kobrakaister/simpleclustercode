@@ -76,6 +76,24 @@ int send_dir(int sockfd,const char *name, int level,char *base_name, char* targe
 return 0;
 }
 
+int send_all(int sock, void *buffer, int length)
+{
+    int orig_length=length;
+    char *ptr = (char*) buffer;
+    while (length > 0)
+    {
+        int i = send(sock, ptr, length, 0);
+        if (i < 1) return -1;
+        ptr += i; 
+        length -= i;
+        if (length!=0)
+        {
+                printf("RESEND %d %d\n",length,orig_length);
+        }
+    }
+    return 0;
+}
+
 int send_file(int sockfd,char *base_name,char *file_name,char *target)
 {
 	char rel_name[400];
@@ -86,13 +104,7 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 	struct stat results;
 	stat(file_name, &results);
 
-	if (results.st_size>0)
-	{
-		packet_size=((((int)results.st_size)/((int)LENGTH))+2)*LENGTH;
-	}else
-	{
-		packet_size=LENGTH;
-	}
+	packet_size=((((int)results.st_size)/((int)LENGTH))+2)*LENGTH;
 
 	buf=(char*)malloc(sizeof(char)*packet_size);
 	bzero(buf, packet_size);
@@ -123,7 +135,9 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 		fclose(fp);
 	}
 
-    if(send(sockfd, buf, packet_size, 0) < 0)
+	int sent=0;
+	sent=send_all(sockfd, buf, packet_size);
+    if(sent < 0)
     {
 		printf("%s\n", strerror(errno));
 	    return -1;

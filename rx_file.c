@@ -45,10 +45,10 @@ int save_size;
 int stat_value;
 	if (cmpstr_min(revbuf,"gpvdmfile")==0)
 	{
-		//printf("%s\n",revbuf);
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
+		//printf("%s\n",revbuf);
 		inp_search_string(&decode,save_name,"#file_name");
 		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
@@ -72,8 +72,6 @@ int stat_value;
 
 		join_path(3,full_path,calpath_get_store_path(),dest,save_name);
 		
-		printf("full path=%s %s %d\n",full_path,target,count);
-
 		count++;
 
 		get_dir_name_from_path(dir_name, full_path);
@@ -93,9 +91,11 @@ return -1;
 
 int file_rx_and_save(char *file_name,int sock_han,int size)
 {
+	int buf_len=((size/LENGTH)+1)*LENGTH;
+	char *buf=malloc(buf_len*sizeof(char));
 	mkdirs(file_name);
-    char revbuf[LENGTH];
-	bzero(revbuf, LENGTH);
+    //char revbuf[LENGTH];
+	bzero(buf, LENGTH);
 	int f_block_sz=0;
 	int write_block_size=0;
 	int written=0;
@@ -107,54 +107,24 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 		return (0);
 	}
 
-	if (size==0)
+	f_block_sz = recv(sock_han, buf, buf_len, MSG_WAITALL);
+
+	if(f_block_sz != buf_len)
 	{
-		printf("File size 0 of %s\n",file_name);
-		fclose(fp);
-		return 0;
+		printf("Not got all the data\n");
+		return -1;
 	}
 
-	written=0;
-	while(f_block_sz = recv(sock_han, revbuf, LENGTH, MSG_WAITALL))
+	int write_sz = fwrite(buf, sizeof(char), size, fp);
+
+	if(write_sz != size)
 	{
-		//printf("rx in=%d",f_block_sz);
-		int left=size-written;
-		if (left<LENGTH)
-		{
-			write_block_size=left;
-		}else
-		{
-			write_block_size=LENGTH;
-		}
-
-		if(f_block_sz < 0)
-		{
-			printf(" %s\n", strerror(errno));
-			return -1;
-		}
-
-		int write_sz = fwrite(revbuf, sizeof(char), write_block_size, fp);
-
-		if(write_sz != write_block_size)
-		{
-			printf("File write failed.\n");
-			break;
-		}
-
-		written+=write_sz;
-		if (written==size)
-		{
-			break;
-		}
-
-		if (written>size)
-		{
-			printf("omg wtf!!!\n");
-		}
-		bzero(revbuf, LENGTH);
+		printf("Not wirtten all the data.\n");
+		return -1;
 	}
 
 	fclose(fp);
 
+	free(buf);
 return 0;
 }
