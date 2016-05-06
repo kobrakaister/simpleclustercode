@@ -42,12 +42,15 @@ struct node_struct
 {
 	char ip[100];
 	char type[100];
+	char host_name[100];
 	int cpus;
 	int load;
 	int sock;
+	double load0;
 };
 
 
+void stop_all_jobs();
 void calpath_set_exe_name(char *in);
 char* calpath_get_exe_name();
 int send_all(int sock, void *buffer, int length);
@@ -60,7 +63,7 @@ struct node_struct* node_find(char *ip);
 int cmp_node_runjob(int sock_han,char *revbuf);
 int cmp_addnode(int sock_han,char *revbuf);
 void nodes_print();
-int node_add(char *name,char *ip, int cpus,int sock);
+int node_add(char *name,char *ip, int cpus,int sock,char *host_name);
 
 int send_file(int sockfd,char *base_name,char *file_name,char *target);
 void mkdirs(char *dir);
@@ -76,7 +79,7 @@ int cmp_rxfile(int sock_han,char *revbuf);
 int file_rx_and_save(char *file_name,int sock_han,int size);
 int send_dir(int sockfd,const char *name, int level,char *base_name,char *target);
 int cmp_addjob(int sock_han,char *revbuf);
-int register_node(int sock, char *node_name);
+int register_node(int sock);
 int send_delete_node(int sock);
 int cmp_deletenode(int sock_han,char *revbuf);
 void node_delete(char *ip);
@@ -119,4 +122,24 @@ char* calpath_get_store_path();
 int cmp_runjobs(int sock_han,char *revbuf);
 struct job* jobs_find_job(char *name);
 
+
+
+void textcolor(int color);
+void set_porgress_color(int in);
+void set_progress_colored();
+void set_porgress_nospin();
+void set_porgress_noreset();
+void set_porgress_max(int in);
+void text_progress(double percent);
+void progress_clear(int n);
+void text_progress_finish();
+void set_progress_multi_line_text(char *in);
+void set_progress_multi_line();
+void text_progress_start(char *in);
+
+int cmp_rxloadstats(int sock,char *revbuf);
+int cmp_nodeload(int sock,char *revbuf);
+int send_node_load(int sock);
+int cmp_node_quit(int sock,char *revbuf);
+int cmp_head_quit(int sock,char *revbuf);
 #endif

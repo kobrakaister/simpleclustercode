@@ -38,8 +38,8 @@ int cmp_node_killall(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmnodekillall")==0)
 	{
-		printf("killall go.o\n");
-		system("killall go.o");
+		printf("killall gpvdm_core\n");
+		system("killall gpvdm_core");
 	}
 
 return -1;
@@ -49,8 +49,9 @@ int cmp_head_killall(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmkillall")==0)
 	{
-		copy_dir_to_all_nodes("src");
-		//broadcast_to_nodes(sock,"gpvdmnodekillall");
+		//copy_dir_to_all_nodes("src");
+		stop_all_jobs();
+		broadcast_to_nodes(sock,"gpvdmnodekillall");
 	}
 
 return -1;

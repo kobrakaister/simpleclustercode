@@ -94,12 +94,12 @@ return NULL;
 }
 
 
-int register_node(int sock,char *node_name)
+int register_node(int sock)
 {
 //printf("send register node\n");
 char sdbuf[LENGTH]; // Receiver buffer
 int cpus;
-
+	char host_name[200];
 	//struct ifreq ifr;
 	//ifr.ifr_addr.sa_family = AF_INET;
     //strncpy(ifr.ifr_name , interface , IFNAMSIZ-1);
@@ -107,11 +107,13 @@ int cpus;
 
 	//sprintf(my_ip,"%s",inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr) );
 
+	gethostname(host_name, 200);
+
 	cpus = sysconf( _SC_NPROCESSORS_ONLN );
 
 	bzero(sdbuf, LENGTH);
 
-	sprintf(sdbuf,"gpvdmaddnode\n#node_name\n%s\n#cpus\n%d\n#ver\n#1.0\n#end",node_name,cpus);
+	sprintf(sdbuf,"gpvdmaddnode\n#ip\n%s\n#cpus\n%d\n#host_name\n%s\n#ver\n#1.0\n#end", get_my_ip(),cpus,host_name);
 
 	if(send_all(sock, sdbuf, LENGTH) < 0)
 	{
@@ -170,10 +172,10 @@ int cpus=0;
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,host_name,"#node_name");
+		inp_search_string(&decode,my_ip,"#ip");
+		inp_search_string(&decode,host_name,"#host_name");
 		inp_search_int(&decode,&cpus,"#cpus");
-		sprintf(full_host_name,"%s%s",my_ip,host_name);
-		node_add("slave",my_ip,cpus,sock_han);
+		node_add("slave",my_ip,cpus,sock_han,host_name);
 		nodes_print();
 		return 0;
 	}
@@ -204,19 +206,42 @@ return -1;
 void nodes_print()
 {
 int i;
-printf("number\tname\tip\t\tcpus\tsock\tload\n");
+printf("number\ttype\tname\tip\t\tcpus\tsock\tload\tload0\n");
 	for (i=0;i<nnodes;i++)
 	{
-		printf("%d\t%s\t%s\t%d\t%d\t%d\n",i,nodes[i].type,nodes[i].ip,nodes[i].cpus,nodes[i].sock,nodes[i].load);
+		printf("%d\t%s\t%s\t%s\t%d\t%d\t%d\t%lf\n",i,nodes[i].type,nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].sock,nodes[i].load,nodes[i].load0);
 	}
 }
 
 int cmp_sendnodelist(int sock,char *revbuf)
 {
 //printf("test send list %s\n",revbuf);
+char buf[LENGTH];
+int i;
+
 	if (cmpstr_min(revbuf,"gpvdmsendnodelist")==0)
 	{
-		printf("send list\n");
+			for (i=0;i<nnodes;i++)
+			{
+				if (strcmp(nodes[i].type,"slave")==0)
+				{
+					printf("Tx to %d\n",i);
+					nodes[i].load0=-1.0;
+					bzero(buf, LENGTH);
+
+					sprintf(buf,"gpvdmnodegetload\n");
+
+					if(send_all(nodes[i].sock, buf, LENGTH) < 0)
+					{
+						printf("%s\n", strerror(errno));
+						return -1;
+					}
+				}
+
+			}
+
+			sleep(1);
+
 		nodes_txnodelist();
 		return 0;
 	}
@@ -250,7 +275,7 @@ int nodes_txnodelist()
 
 		for (i=0;i<nnodes;i++)
 		{
-			sprintf(temp,"%s:%d:%d\n",nodes[i].ip,nodes[i].cpus,nodes[i].load);
+			sprintf(temp,"%s:%s:%d:%d:%lf\n",nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].load,nodes[i].load0);
 			strcat(buf,temp);
 		}
 
@@ -269,7 +294,7 @@ void nodes_reset()
 nnodes=0;
 }
 
-int node_add(char *type,char *ip,int cpus, int sock)
+int node_add(char *type,char *ip,int cpus, int sock,char *host_name)
 {
 int i;
 	for (i=0;i<nnodes;i++)
@@ -278,22 +303,27 @@ int i;
 		{
 				strcpy(nodes[i].ip,ip);
 				strcpy(nodes[i].type,type);
+				strcpy(nodes[i].host_name,host_name);
 				nodes[i].cpus=cpus;
 				nodes[i].sock=sock;
 				nodes[i].load=0;
+				nodes[i].load0=0;
 				return 0;
 		}
 	}
 
 	strcpy(nodes[nnodes].ip,ip);
 	strcpy(nodes[nnodes].type,type);
+	strcpy(nodes[nnodes].host_name,host_name);
 	nodes[nnodes].cpus=cpus;
 	nodes[nnodes].sock=sock;
 	nodes[nnodes].load=0;
+	nodes[nnodes].load0=0;
 	nnodes++;
 nodes_print();
 return 0;
 }
+
 
 pthread_mutex_t lock;
 
@@ -507,7 +537,8 @@ int i;
 			strcpy(nodes[i].type,"");
 			nodes[i].cpus=-1;
 			nodes[i].sock=-1;
-			nodes[i].load=0;
+			nodes[i].load=-1;
+			nodes[i].load0=-1;
 			break;
 		}
 	}

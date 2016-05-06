@@ -110,6 +110,21 @@ int get_njobs()
 	return njobs;
 }
 
+void stop_all_jobs()
+{
+int i=0;
+
+	for (i=0;i<njobs;i++)
+	{
+		if (jobs[i].status==0)
+		{
+			jobs[i].status=3;
+		}
+	}
+
+return;
+}
+
 double jobs_cal_percent_finished()
 {
 int i=0;

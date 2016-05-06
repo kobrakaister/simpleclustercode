@@ -37,26 +37,70 @@
 struct node_struct nodes[100];
 static int nnodes=0;
 
-
-int cmp_register_master(int sock,char *revbuf)
+int send_node_load(int sock)
 {
-	char command[200];
-	char my_ip[200];
-	char buf[LENGTH];
-	struct inp_file decode;
-	if (cmpstr_min(revbuf,"gpvdmregistermaster")==0)
+	double loadavg[3];
+	char buf[400];
+	getloadavg(loadavg, 3);
+
+	sprintf(buf,"gpvdmload\n#load0\n%lf\n#load1\n%lf\n#load2\n%lf\n#ip\n%s\n#end",loadavg[0],loadavg[1],loadavg[2],get_my_ip());
+
+	if(send_all(sock, buf, LENGTH) < 0)
 	{
+		printf("%s\n", strerror(errno));
+		return -1;
+	}
 
+return 0;
+}
 
-		get_ip_from_sock(my_ip,sock);
-		printf( "register %s\n",my_ip);
-		//inp_init(&decode);
-		//decode.data=revbuf;
-		//decode.fsize=strlen(revbuf);
-		node_add("master",my_ip,0,sock,my_ip);
-		//strcpy(buf,"hello!!!!!\n");
-		//send_all(sock, buf, LENGTH);
-		return 0;
+int cmp_nodeload(int sock,char *revbuf)
+{
+	char exe_name[200];
+	char dir_name[200];
+	char buf[LENGTH];
+	int cpus=0;
+
+	int ret=0;
+	if (cmpstr_min(revbuf,"gpvdmnodegetload")==0)
+	{
+		ret=send_node_load(sock);
+		return ret;
+	}
+
+return -1;
+}
+
+int cmp_rxloadstats(int sock,char *revbuf)
+{
+	char ip[200];
+	double load0=0.0;
+	double load1=0.0;
+	double load2=0.0;
+	struct node_struct* node;
+	if (cmpstr_min(revbuf,"gpvdmload")==0)
+	{
+		struct inp_file decode;
+		inp_init(&decode);
+		decode.data=revbuf;
+		decode.fsize=strlen(revbuf);
+		printf("'%s'\n",revbuf);
+		inp_search_double(&decode,&load0,"#load0");
+		printf("1\n");
+		inp_search_double(&decode,&load1,"#load1");
+		printf("2\n");
+		inp_search_double(&decode,&load2,"#load2");
+		printf("3\n");
+		inp_search_string(&decode,ip,"#ip");
+		printf("4\n");
+
+		printf("ip=%s load=%lf",ip,load0);
+
+		node=node_find(ip);
+		if (node!=NULL)
+		{
+			node->load0=load0;
+		}
 	}
 
 return -1;

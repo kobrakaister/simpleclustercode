@@ -34,29 +34,22 @@
 #include <net/if.h>
 #include "inp.h"
 
-struct node_struct nodes[100];
-static int nnodes=0;
-
-
-int cmp_register_master(int sock,char *revbuf)
+int cmp_node_quit(int sock,char *revbuf)
 {
-	char command[200];
-	char my_ip[200];
-	char buf[LENGTH];
-	struct inp_file decode;
-	if (cmpstr_min(revbuf,"gpvdmregistermaster")==0)
+	if (cmpstr_min(revbuf,"gpvdmquit")==0)
 	{
+		exit(0);
+	}
 
+return -1;
+}
 
-		get_ip_from_sock(my_ip,sock);
-		printf( "register %s\n",my_ip);
-		//inp_init(&decode);
-		//decode.data=revbuf;
-		//decode.fsize=strlen(revbuf);
-		node_add("master",my_ip,0,sock,my_ip);
-		//strcpy(buf,"hello!!!!!\n");
-		//send_all(sock, buf, LENGTH);
-		return 0;
+int cmp_head_quit(int sock,char *revbuf)
+{
+	if (cmpstr_min(revbuf,"gpvdmquit")==0)
+	{
+		broadcast_to_nodes(sock,"gpvdmquit");
+		exit(0);
 	}
 
 return -1;

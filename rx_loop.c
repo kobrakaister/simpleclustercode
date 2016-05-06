@@ -43,7 +43,6 @@ int sock=*((int*)s);
 	while(f_block_sz = recv(sock, revbuf, LENGTH, MSG_WAITALL))
 	{
 
-		printf("block_size=%s\n",revbuf);
 		if(f_block_sz < 0)
 		{
 			printf("here %s\n", strerror(errno));
@@ -77,9 +76,15 @@ int sock=*((int*)s);
 		cmp_head_exe(sock,revbuf);
 
 		cmp_clean(sock,revbuf);
+
+		cmp_rxloadstats(sock,revbuf);
+
+		cmp_head_quit(sock,revbuf);
+
+		bzero(revbuf, LENGTH);
 	}
 
-	bzero(revbuf, LENGTH);
+	
 
 close(sock);
 printf("leavng main rx loop\n");

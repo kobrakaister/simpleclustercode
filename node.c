@@ -45,31 +45,8 @@ void my_handler(int s)
 	exit(1); 
 }
 
-int node()
+int login(char * master_ip, int port)
 {
-
-char node_name[100];
-char store_path[200];
-char temp_path[200];
-char interface[200];
-char master_ip[200];
-int port=0;
-struct inp_file inp;
-inp_init(&inp);
-if (inp_load(&inp,"node.inp")!=0)
-{
-	printf("can't find file config.inp");
-	exit(0);
-}
-inp_check(&inp,1.0);
-inp_search_string(&inp,node_name,"#node_name");
-inp_search_string(&inp,temp_path,"#store_path");
-inp_search_string(&inp,interface,"#interface");
-inp_search_string(&inp,master_ip,"#master_ip");
-inp_search_int(&inp,&port,"#port");
-inp_free(&inp);
-realpath(temp_path, store_path);
-calpath_set_store_path(store_path);
 
 
     int sockfd; // Socket file descriptor
@@ -92,62 +69,118 @@ calpath_set_store_path(store_path);
 
     if (connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr)) == -1)
     {
-		printf(" %s\n", strerror(errno));
-        return (0);
+        return -1;
     }
     else
 	{
 		printf("client: Connected to server at port %d...ok!\n", port);
 	}
+return sockfd;
+}
+
+int node()
+{
+	int port=0;
+	char temp_path[200];
+	char interface[200];
+	char master_ip[200];
+	char store_path[200];
 
 
-	char revbuf[LENGTH];
-	int f_block_sz;
-
-	struct sigaction sigIntHandler;
-
-	sigIntHandler.sa_handler = my_handler;
-	sigemptyset(&sigIntHandler.sa_mask);
-	sigIntHandler.sa_flags = 0;
-
-	sigaction(SIGINT, &sigIntHandler, NULL);
-
-	global_sock=sockfd;
-
-	cal_my_ip(sockfd);
-
-	register_node(sockfd,node_name);
 
 
-	while(f_block_sz = recv(sockfd, revbuf, LENGTH, MSG_WAITALL))
+	struct inp_file inp;
+	inp_init(&inp);
+	if (inp_load(&inp,"node.inp")!=0)
 	{
+		printf("can't find file config.inp");
+		exit(0);
+	}
+	inp_check(&inp,1.0);
+	inp_search_string(&inp,temp_path,"#store_path");
+	inp_search_string(&inp,interface,"#interface");
+	inp_search_string(&inp,master_ip,"#master_ip");
+	inp_search_int(&inp,&port,"#port");
+	inp_free(&inp);
 
-		//printf("%s\n",revbuf);
-
-		cmp_node_runjob(sockfd,revbuf);
-
-		cmp_rxfile(sockfd,revbuf);
-
-		cmp_node_killall(sockfd,revbuf);
-
-		cmp_node_sleep(sockfd,revbuf);
-
-		cmp_node_poweroff(sockfd,revbuf);
-
-		cmp_node_send_data(sockfd,revbuf);
-
-		if(f_block_sz < 0)
+	realpath(temp_path, store_path);
+	calpath_set_store_path(store_path);
+	set_porgress_max(20);
+	do
+	{
+		int sockfd=0;
+		double p=0.0;
+		do
 		{
-			printf(" %s\n", strerror(errno));
-			return (0);
-		}
+			sockfd=login(master_ip,port);
+
+			if (sockfd>=0)
+			{
+				break;
+			}
+
+			sleep(1);
+			text_progress(p);
+			fputs("\r", stdout);
+			p=p+0.1;
+			if (p>1.0)
+			{
+				p=0;
+			}
+		}while(sockfd<0);
+
+		global_sock=sockfd;
+
+		char revbuf[LENGTH];
+		int f_block_sz;
+
+		struct sigaction sigIntHandler;
+
+		sigIntHandler.sa_handler = my_handler;
+		sigemptyset(&sigIntHandler.sa_mask);
+		sigIntHandler.sa_flags = 0;
+		sigaction(SIGINT, &sigIntHandler, NULL);
+
+		cal_my_ip(sockfd);
+
+		register_node(sockfd);
+
+		send_node_load(sockfd);
+
+		while(f_block_sz = recv(sockfd, revbuf, LENGTH, MSG_WAITALL))
+		{
+
+			//printf("%s\n",revbuf);
+
+			cmp_node_runjob(sockfd,revbuf);
+
+			cmp_rxfile(sockfd,revbuf);
+
+			cmp_node_killall(sockfd,revbuf);
+
+			cmp_node_sleep(sockfd,revbuf);
+
+			cmp_node_poweroff(sockfd,revbuf);
+
+			cmp_node_send_data(sockfd,revbuf);
+
+			cmp_nodeload(sockfd,revbuf);
+
+			cmp_node_quit(sockfd,revbuf);
+
+			if(f_block_sz < 0)
+			{
+				printf(" %s\n", strerror(errno));
+				return (0);
+			}
 
 		
-	}
-/////////////////////////////////////////
+		}
 
+		close (sockfd);
+		printf("client: connection lost trying again.\n");
 
-    close (sockfd);
-    printf("client: connection lost.\n");
+	}while(1);
+
     return (0);
 }

@@ -81,18 +81,20 @@ int cmp_node_runjob(int sock,char *revbuf)
 			printf("change dir to %s\n",sim_dir);
 			chdir(sim_dir);
 
-			char full_exe_path[200];
+			char full_exe_path[400];
+			char lib_path[400];
+			char command[400];
 			join_path(3,full_exe_path,calpath_get_store_path(), "src",exe_name);
-
-			printf("full command =%s\n",full_exe_path);
-			system(full_exe_path);
+			join_path(2,lib_path,calpath_get_store_path(), "src");
+			sprintf(command,"export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%s;%s",lib_path,full_exe_path);
+			printf("full command =%s\n",command);
+			system(command);
 			
 			bzero(buf, LENGTH);
 
 
 			//send_dir(sock, sim_dir, 0, sim_dir, dir_name);
 
-			//printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 			printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! %s\n",dir_name);
 
 			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
