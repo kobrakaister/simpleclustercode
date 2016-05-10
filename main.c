@@ -25,6 +25,9 @@
 int main(int argc, char *argv[])
 {
 printf("Clustering code\n");
+
+encrypt_load();
+
 if (strcmp(argv[1],"--head")==0)
 {
 	head();

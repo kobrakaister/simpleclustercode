@@ -33,6 +33,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "inp.h"
+#include <time.h>
 
 struct node_struct nodes[100];
 static int nnodes=0;
@@ -40,34 +41,38 @@ static int nnodes=0;
 int send_node_load(int sock)
 {
 	double loadavg[3];
-	char buf[400];
+	char buf[LENGTH];
+
 	getloadavg(loadavg, 3);
 
 	sprintf(buf,"gpvdmload\n#load0\n%lf\n#load1\n%lf\n#load2\n%lf\n#ip\n%s\n#end",loadavg[0],loadavg[1],loadavg[2],get_my_ip());
 
-	if(send_all(sock, buf, LENGTH) < 0)
+	if(send_all(sock, buf, LENGTH,TRUE) < 0)
 	{
 		printf("%s\n", strerror(errno));
 		return -1;
 	}
+
 
 return 0;
 }
 
 int cmp_nodeload(int sock,char *revbuf)
 {
+	printf("rod 0\n");
 	char exe_name[200];
 	char dir_name[200];
 	char buf[LENGTH];
 	int cpus=0;
 
 	int ret=0;
+	printf("rod 1\n");
 	if (cmpstr_min(revbuf,"gpvdmnodegetload")==0)
 	{
 		ret=send_node_load(sock);
 		return ret;
 	}
-
+	printf("rod 2\n");
 return -1;
 }
 
@@ -81,25 +86,27 @@ int cmp_rxloadstats(int sock,char *revbuf)
 	if (cmpstr_min(revbuf,"gpvdmload")==0)
 	{
 		struct inp_file decode;
+		//printf("revbuf='%s'\n",revbuf);
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		printf("'%s'\n",revbuf);
-		inp_search_double(&decode,&load0,"#load0");
-		printf("1\n");
-		inp_search_double(&decode,&load1,"#load1");
-		printf("2\n");
-		inp_search_double(&decode,&load2,"#load2");
-		printf("3\n");
-		inp_search_string(&decode,ip,"#ip");
-		printf("4\n");
 
-		printf("ip=%s load=%lf",ip,load0);
+		//printf("now doing inp\n");
+		inp_search_double(&decode,&load0,"#load0");
+
+		inp_search_double(&decode,&load1,"#load1");
+
+		inp_search_double(&decode,&load2,"#load2");
+
+		inp_search_string(&decode,ip,"#ip");
+
+		//printf("ip=%s load=%lf\n",ip,load0);
 
 		node=node_find(ip);
 		if (node!=NULL)
 		{
 			node->load0=load0;
+			node->alive=time(NULL);
 		}
 	}
 

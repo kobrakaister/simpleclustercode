@@ -46,7 +46,7 @@ int send_command(int sockfd,char *command,char *dir_name,int cpus)
 
 	sprintf(sdbuf,"gpvdmcommand\n#exe_name\n%s\n#dir_name\n%s\n#cpus\n%d\n#end",command,dir_name,cpus);
 
-    if(send_all(sockfd, sdbuf, LENGTH) < 0)
+    if(send_all(sockfd, sdbuf, LENGTH,TRUE) < 0)
     {
 		printf("%s\n", strerror(errno));
 	    return -1;
@@ -99,7 +99,7 @@ int cmp_node_runjob(int sock,char *revbuf)
 
 			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
 
-			if(send_all(sock, buf, LENGTH) < 0)
+			if(send_all(sock, buf, LENGTH,TRUE) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;

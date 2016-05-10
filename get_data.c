@@ -62,7 +62,7 @@ int cmp_node_send_data(int sock,char *revbuf)
 		bzero(buf, LENGTH);
 
 		sprintf(buf,"gpvdmgetdata\n");
-		if(send_all(sock, buf, LENGTH) < 0)
+		if(send_all(sock, buf, LENGTH,TRUE) < 0)
 		{
 			printf("%s\n", strerror(errno));
 			return -1;
@@ -99,7 +99,7 @@ int cmp_get_data(int sock,char *revbuf)
 				bzero(buf, LENGTH);
 
 				sprintf(buf,"gpvdmnodesenddata\n#job\njob%d\n#end",i);
-				if(send_all(job_node->sock, buf, LENGTH) < 0)
+				if(send_all(job_node->sock, buf, LENGTH,TRUE) < 0)
 				{
 					printf("%s\n", strerror(errno));
 					return -1;

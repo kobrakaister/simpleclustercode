@@ -34,19 +34,61 @@
 #include <net/if.h>
 #include "inp.h"
 
+
+int rx_all(char *buf,int total_len,int sock)
+{
+bzero(buf, total_len);
+int ret=0;
+char *ptr=buf;
+int len=total_len;
+int tot=0;
+int times=0;
+do
+{
+	ret = recv(sock, ptr, len, 0);
+
+	if (ret<=0)
+	{
+		return ret;
+	}
+
+
+	if (times==0)
+	{
+		if (cmpstr_min(buf,"GET / HTTP/1.1")==0)
+		{
+			char s[2000];
+			nodes_html_load(s);
+			send_all(sock, s, strlen(s),FALSE);
+			close(sock);
+		}
+	}
+
+	len-=ret;
+	tot+=ret;
+	ptr=buf+tot;
+
+	times+=1;
+
+}while(len!=0);
+
+decrypt(buf,total_len);
+return tot;
+}
+
 void *rx_loop(void *s)
 {
 int sock=*((int*)s);
 	int f_block_sz = 0;
     char revbuf[LENGTH];
 
-	while(f_block_sz = recv(sock, revbuf, LENGTH, MSG_WAITALL))
+	while(f_block_sz=rx_all(revbuf,LENGTH,sock))
 	{
 
-		if(f_block_sz < 0)
+		if(f_block_sz <=0)
 		{
 			printf("here %s\n", strerror(errno));
-			return NULL;
+			break;
 		}
 
 		cmp_rxfile(sock,revbuf);
@@ -81,7 +123,10 @@ int sock=*((int*)s);
 
 		cmp_head_quit(sock,revbuf);
 
+		cmp_rxsetmaxloads(sock,revbuf);
+
 		bzero(revbuf, LENGTH);
+
 	}
 
 	

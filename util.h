@@ -47,13 +47,16 @@ struct node_struct
 	int load;
 	int sock;
 	double load0;
+	int max_cpus;
+	time_t alive;
 };
 
 
+int nodes_html_load(char *buf);
 void stop_all_jobs();
 void calpath_set_exe_name(char *in);
 char* calpath_get_exe_name();
-int send_all(int sock, void *buffer, int length);
+int send_all(int sock, void *buffer, int length, int encode);
 
 int cmp_node_send_data(int sock,char *revbuf);
 int cmp_get_data(int sock,char *revbuf);
@@ -142,4 +145,12 @@ int cmp_nodeload(int sock,char *revbuf);
 int send_node_load(int sock);
 int cmp_node_quit(int sock,char *revbuf);
 int cmp_head_quit(int sock,char *revbuf);
+
+void encrypt(char *data,int round_len);
+void decrypt(char *data,int round_len);
+
+int cmp_rxsetmaxloads(int sock,char *revbuf);
+void encrypt_load();
+int node_alive_time(struct node_struct* node);
+
 #endif

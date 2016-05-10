@@ -31,12 +31,32 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 #include "util.h"
 #include "inp.h"
 
 static int global_sock=0;
 
+
+void alarm_wakeup (int i)
+{
+		struct itimerval tout_val;
+
+		signal(SIGALRM,alarm_wakeup);
+
+		tout_val.it_interval.tv_sec = 0;
+		tout_val.it_interval.tv_usec = 0;
+		tout_val.it_value.tv_sec = 2;
+		tout_val.it_value.tv_usec = 0;
+		if (global_sock>=0)
+		{
+			send_node_load(global_sock);
+			printf("alarm!\n");
+		}
+
+		setitimer(ITIMER_REAL, &tout_val,0);
+}
 
 void my_handler(int s)
 {
@@ -85,8 +105,7 @@ int node()
 	char interface[200];
 	char master_ip[200];
 	char store_path[200];
-
-
+	struct itimerval tout_val;
 
 
 	struct inp_file inp;
@@ -112,6 +131,7 @@ int node()
 		double p=0.0;
 		do
 		{
+			global_sock=-1;
 			sockfd=login(master_ip,port);
 
 			if (sockfd>=0)
@@ -134,6 +154,16 @@ int node()
 		char revbuf[LENGTH];
 		int f_block_sz;
 
+
+
+		tout_val.it_interval.tv_sec = 0;
+		tout_val.it_interval.tv_usec = 0;
+		tout_val.it_value.tv_sec = 2;
+		tout_val.it_value.tv_usec = 0;
+		setitimer(ITIMER_REAL, &tout_val,0);
+
+		signal(SIGALRM,alarm_wakeup);
+
 		struct sigaction sigIntHandler;
 
 		sigIntHandler.sa_handler = my_handler;
@@ -149,7 +179,7 @@ int node()
 
 		while(f_block_sz = recv(sockfd, revbuf, LENGTH, MSG_WAITALL))
 		{
-
+			decrypt(revbuf,LENGTH);
 			//printf("%s\n",revbuf);
 
 			cmp_node_runjob(sockfd,revbuf);
@@ -171,7 +201,7 @@ int node()
 			if(f_block_sz < 0)
 			{
 				printf(" %s\n", strerror(errno));
-				return (0);
+				break;
 			}
 
 		

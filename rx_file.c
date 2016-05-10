@@ -108,6 +108,7 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 	}
 
 	f_block_sz = recv(sock_han, buf, buf_len, MSG_WAITALL);
+	decrypt(buf,buf_len);
 
 	if(f_block_sz != buf_len)
 	{

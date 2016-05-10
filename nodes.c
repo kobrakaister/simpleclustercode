@@ -53,8 +53,8 @@ sprintf(buf,"%s",command);
 
 		if (strcmp(nodes[i].type,"slave")==0)
 		{
-			printf("broadcast to %s\n",nodes[i].type);
-			if(send_all(nodes[i].sock, buf, LENGTH) < 0)
+			printf("broadcast to %s\n",nodes[i].host_name);
+			if(send_all(nodes[i].sock, buf, LENGTH,TRUE) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;
@@ -115,7 +115,7 @@ int cpus;
 
 	sprintf(sdbuf,"gpvdmaddnode\n#ip\n%s\n#cpus\n%d\n#host_name\n%s\n#ver\n#1.0\n#end", get_my_ip(),cpus,host_name);
 
-	if(send_all(sock, sdbuf, LENGTH) < 0)
+	if(send_all(sock, sdbuf, LENGTH,TRUE) < 0)
 	{
 		printf("%s\n", strerror(errno));
 		return -1;
@@ -148,7 +148,7 @@ int cpus;
 
 	sprintf(sdbuf,"gpvddeletenode");
 
-	if(send_all(sock, sdbuf, LENGTH) < 0)
+	if(send_all(sock, sdbuf, LENGTH,TRUE) < 0)
 	{
 		printf("%s\n", strerror(errno));
 		return -1;
@@ -206,13 +206,75 @@ return -1;
 void nodes_print()
 {
 int i;
-printf("number\ttype\tname\tip\t\tcpus\tsock\tload\tload0\n");
+printf("number\ttype\tname\t\tip\t\tcpus\tmax_cpus\tsock\tload\tload0\tlast_seen\n");
 	for (i=0;i<nnodes;i++)
 	{
-		printf("%d\t%s\t%s\t%s\t%d\t%d\t%d\t%lf\n",i,nodes[i].type,nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].sock,nodes[i].load,nodes[i].load0);
+		printf("%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%lf\n",i,nodes[i].type,nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].max_cpus,nodes[i].sock,nodes[i].load,nodes[i].load0,node_alive_time(&(nodes[i])));
 	}
 }
 
+int cmp_rxsetmaxloads(int sock,char *revbuf)
+{
+//printf("test send list %s\n",revbuf);
+char buf[LENGTH];
+int i;
+char *node_ip=NULL;
+char node_buf[100];
+char *max_load=NULL;
+char max_buf[100];
+int cpus=0.0;
+
+	if (cmpstr_min(revbuf,"gpvdmsetmaxloads")==0)
+	{
+		printf("rod %s\n",revbuf);
+		struct inp_file in;
+		inp_init(&in);
+		in.data=revbuf;
+		in.fsize=strlen(revbuf);
+		inp_reset_read(&in);
+
+		max_load  = inp_get_string(&in);
+
+		while(max_load!=NULL)
+		{
+			node_ip  = inp_get_string(&in);
+			if (node_ip==NULL)
+			{
+				break;
+			}
+			strcpy(node_buf,node_ip);
+
+			max_load  = inp_get_string(&in);		
+			if (max_load==NULL)
+			{
+				break;
+			}
+			strcpy(max_buf,max_load);
+
+			printf("node ip %s\n",node_buf);
+			printf("max_load %s\n",max_buf);
+			struct node_struct* node=NULL;
+			node=node_find(node_buf);
+
+			if (node==NULL)
+			{
+				printf("I can't find IP %s\n",node_buf);
+			}
+
+			sscanf(max_buf,"%d",&cpus);
+			printf("max found as%d %s\n",cpus,node->host_name);
+			node->max_cpus=cpus;
+
+			nodes_print();
+		}
+
+		nodes_print();
+
+		return 0;
+	}
+
+return -1;
+}
 int cmp_sendnodelist(int sock,char *revbuf)
 {
 //printf("test send list %s\n",revbuf);
@@ -221,27 +283,6 @@ int i;
 
 	if (cmpstr_min(revbuf,"gpvdmsendnodelist")==0)
 	{
-			for (i=0;i<nnodes;i++)
-			{
-				if (strcmp(nodes[i].type,"slave")==0)
-				{
-					printf("Tx to %d\n",i);
-					nodes[i].load0=-1.0;
-					bzero(buf, LENGTH);
-
-					sprintf(buf,"gpvdmnodegetload\n");
-
-					if(send_all(nodes[i].sock, buf, LENGTH) < 0)
-					{
-						printf("%s\n", strerror(errno));
-						return -1;
-					}
-				}
-
-			}
-
-			sleep(1);
-
 		nodes_txnodelist();
 		return 0;
 	}
@@ -249,10 +290,37 @@ int i;
 return -1;
 }
 
+int nodes_html_load(char *buf)
+{
+
+	time_t t = time(NULL);
+	struct tm tm = *localtime(&t);
+
+	int i;
+	char temp[200];
+
+	strcpy(buf,"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<!DOCTYPE html><html><head>");
+	strcat(buf,"<title>Bye-bye baby bye-bye</title>");
+	strcat(buf,"<body>");
+	sprintf(temp,"<h1>Cluster status %d-%d-%d %d:%d:%d:</h1>", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+	strcat(buf,temp);
+
+	for (i=0;i<nnodes;i++)
+	{
+		sprintf(temp,"Node <b>%s</b> (%s CPUs=%d): <b>%lf</b><br>",nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].load0);
+		strcat(buf,temp);
+	}
+
+	strcat(buf,"</body></html>\r\n");
+
+return 0;
+}
+
 int nodes_txnodelist()
 {
-	char buf[LENGTH];
-	char temp[50];
+	char *buf=NULL;
+	char temp[100];
 	int i;
 
 	struct node_struct* master=NULL;
@@ -260,31 +328,30 @@ int nodes_txnodelist()
 
 	if (master!=NULL)
 	{
-		bzero(buf, LENGTH);
+		
+		buf=malloc(LENGTH*2*sizeof(char));
+		bzero(buf, LENGTH*2);
 
 		sprintf(buf,"gpvdmnodelist\n");
-
-		if(send_all(master->sock, buf, LENGTH) < 0)
-		{
-			printf("%s\n", strerror(errno));
-			return -1;
-		}
-
-		bzero(buf, LENGTH);
 
 
 		for (i=0;i<nnodes;i++)
 		{
-			sprintf(temp,"%s:%s:%d:%d:%lf\n",nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].load,nodes[i].load0);
-			strcat(buf,temp);
+			sprintf(temp,"%s:%s:%d:%d:%lf:%d:%d\n",nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].load,nodes[i].load0,nodes[i].max_cpus,node_alive_time(&(nodes[i])));
+			strcat((buf+LENGTH),temp);
 		}
 
-		if(send_all(master->sock, buf, LENGTH) < 0)
+
+		if(send_all(master->sock, buf, LENGTH*2,TRUE) < 0)
 		{
 			printf("%s\n", strerror(errno));
 			return -1;
 		}
+
+		free(buf);
+
 	}
+
 
 return 0;
 }
@@ -292,6 +359,11 @@ return 0;
 void nodes_reset()
 {
 nnodes=0;
+}
+
+int node_alive_time(struct node_struct* node)
+{
+return (int)(time(NULL)-node->alive);
 }
 
 int node_add(char *type,char *ip,int cpus, int sock,char *host_name)
@@ -305,6 +377,7 @@ int i;
 				strcpy(nodes[i].type,type);
 				strcpy(nodes[i].host_name,host_name);
 				nodes[i].cpus=cpus;
+				nodes[i].max_cpus=cpus;
 				nodes[i].sock=sock;
 				nodes[i].load=0;
 				nodes[i].load0=0;
@@ -316,6 +389,7 @@ int i;
 	strcpy(nodes[nnodes].type,type);
 	strcpy(nodes[nnodes].host_name,host_name);
 	nodes[nnodes].cpus=cpus;
+	nodes[nnodes].max_cpus=cpus;
 	nodes[nnodes].sock=sock;
 	nodes[nnodes].load=0;
 	nodes[nnodes].load0=0;
@@ -382,7 +456,7 @@ printf("here xxx\n");
 			{
 				if (strcmp(nodes[i].type,"slave")==0)
 				{
-					if (nodes[i].load<nodes[i].cpus)
+					if (nodes[i].load<nodes[i].max_cpus)
 					{
 						char full_path[200];
 						printf("sending job to %s\n",nodes[i].ip);
@@ -492,7 +566,7 @@ int cmp_simfinished(int sock,char *revbuf)
 
 			sprintf(buf,"gpvdmpercent\n#percent\n%lf\n#end",jobs_cal_percent_finished());
 
-			if(send_all(master->sock, buf, LENGTH) < 0)
+			if(send_all(master->sock, buf, LENGTH,TRUE) < 0)
 			{
 				printf("%s\n", strerror(errno));
 				return -1;
@@ -505,7 +579,7 @@ int cmp_simfinished(int sock,char *revbuf)
 
 				sprintf(buf,"gpvdmfinished\n");
 
-				if(send_all(master->sock, buf, LENGTH) < 0)
+				if(send_all(master->sock, buf, LENGTH,TRUE) < 0)
 				{
 					printf("%s\n", strerror(errno));
 					return -1;

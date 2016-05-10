@@ -210,8 +210,7 @@ in->pos=0;
 char* inp_get_string(struct inp_file *in)
 {
 int i;
-static char ret[100];
-memset(ret, 0, 100);
+memset(in->temp, 0, 100);
 int ii=0;
 if (in->pos>=in->fsize)
 {
@@ -222,18 +221,18 @@ for (i=in->pos;i<in->fsize;i++)
 {
 	if ((in->data[i]=='\n')||(in->data[i]==0))
 	{
-		ret[ii]=0;
+		in->temp[ii]=0;
 		in->pos++;
 		break;
 	}
 
-	ret[ii]=in->data[i];
+	in->temp[ii]=in->data[i];
 	ii++;
 	in->pos++;
 
 }
 
-return ret;
+return in->temp;
 }
 
 
@@ -511,7 +510,7 @@ if (inp_search(temp,in,token)==0)
 	sscanf(temp,"%le",out);
 	return;
 }
-ewe("token %s not found in file %s\n",token,in->full_name);
+ewe("token %s not found in file %s '%s'\n",token,in->full_name,in->data);
 }
 
 
@@ -532,7 +531,7 @@ if (inp_search(out,in,token)==0)
 {
 	return;
 }
-ewe("token %s not found in file %s\n",token,in->full_name);
+ewe("token %s not found in file %s '%s'\n",token,in->full_name,in->data);
 }
 
 void inp_check(struct inp_file *in,double ver)

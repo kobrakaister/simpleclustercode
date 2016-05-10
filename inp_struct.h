@@ -32,6 +32,7 @@ long fsize;
 char full_name[1000];
 int pos;
 int edited;
+char temp[200];
 };
 
 struct inp_list
