@@ -48,7 +48,7 @@ int cmp_head_poweroff(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmpoweroff")==0)
 	{
-		broadcast_to_nodes(sock,"gpvdmnodepoweroff");
+		broadcast_to_nodes("gpvdmnodepoweroff");
 	}
 
 return -1;

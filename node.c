@@ -52,7 +52,6 @@ void alarm_wakeup (int i)
 		if (global_sock>=0)
 		{
 			send_node_load(global_sock);
-			printf("alarm!\n");
 		}
 
 		setitimer(ITIMER_REAL, &tout_val,0);
@@ -197,6 +196,8 @@ int node()
 			cmp_nodeload(sockfd,revbuf);
 
 			cmp_node_quit(sockfd,revbuf);
+
+			cmp_slave_clean(sockfd,revbuf);
 
 			if(f_block_sz < 0)
 			{

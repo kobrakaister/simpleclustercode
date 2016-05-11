@@ -48,7 +48,7 @@ int cmp_head_sleep(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmsleep")==0)
 	{
-		broadcast_to_nodes(sock,"gpvdmnodesleep");
+		broadcast_to_nodes("gpvdmnodesleep");
 	}
 
 return -1;

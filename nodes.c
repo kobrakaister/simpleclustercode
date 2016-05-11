@@ -38,22 +38,22 @@
 struct node_struct nodes[100];
 static int nnodes=0;
 
-int broadcast_to_nodes(int sock,char *command)
+int broadcast_to_nodes(char *command)
 {
 printf("broadcast\n");
 int i;
 char buf[LENGTH];
-bzero(buf, LENGTH);
-
-sprintf(buf,"%s",command);
 
 	for (i=0;i<nnodes;i++)
 	{
-		printf("looking at %s\n",nodes[i].type);
 
 		if (strcmp(nodes[i].type,"slave")==0)
 		{
 			printf("broadcast to %s\n",nodes[i].host_name);
+
+			bzero(buf, LENGTH);
+			sprintf(buf,"%s",command);
+
 			if(send_all(nodes[i].sock, buf, LENGTH,TRUE) < 0)
 			{
 				printf("%s\n", strerror(errno));
@@ -540,7 +540,7 @@ int cmp_simfinished(int sock,char *revbuf)
 		//printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		if (master!=NULL)
 		{
-			struct job* my_job=jobs_find_job(dir_name);
+			/*struct job* my_job=jobs_find_job(dir_name);
 			if (my_job!=NULL)
 			{
 				//printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",dir_name);
@@ -559,7 +559,7 @@ int cmp_simfinished(int sock,char *revbuf)
 			{
 				printf("Can't find job %s\n",dir_name);
 				jobs_print();
-			}
+			}*/
 	printf("here5\n");
 
 			bzero(buf, LENGTH);

@@ -35,14 +35,14 @@
 #include "inp.h"
 
 
-int cmp_clean(int sock,char *revbuf)
+int cmp_master_clean(int sock,char *revbuf)
 {
 	char command[200];
 	char dir_name[200];
 	char buf[LENGTH];
 	int cpus=0;
 	char *dir;
-	if (cmpstr_min(revbuf,"gpvdmclean")==0)
+	if (cmpstr_min(revbuf,"gpvdm_master_clean")==0)
 	{
 		dir=calpath_get_store_path();
 		printf("I want to delete %s\n",dir);
@@ -50,6 +50,31 @@ int cmp_clean(int sock,char *revbuf)
 		{
 			remove_dir(dir);
 		}
+
+		broadcast_to_nodes("gpvdm_slave_clean");
+
+		jobs_reset();
+	}
+
+return -1;
+}
+
+int cmp_slave_clean(int sock,char *revbuf)
+{
+	char command[200];
+	char dir_name[200];
+	char buf[LENGTH];
+	int cpus=0;
+	char *dir;
+	if (cmpstr_min(revbuf,"gpvdm_slave_clean")==0)
+	{
+		dir=calpath_get_store_path();
+		printf("I want to delete %s\n",dir);
+		if (strlen(dir)>4)		// / is not allowed!
+		{
+			remove_dir(dir);
+		}
+
 	}
 
 return -1;

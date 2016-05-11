@@ -117,7 +117,7 @@ int sock=*((int*)s);
 
 		cmp_head_exe(sock,revbuf);
 
-		cmp_clean(sock,revbuf);
+		cmp_master_clean(sock,revbuf);
 
 		cmp_rxloadstats(sock,revbuf);
 

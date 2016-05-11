@@ -51,7 +51,7 @@ int cmp_head_killall(int sock,char *revbuf)
 	{
 		//copy_dir_to_all_nodes("src");
 		stop_all_jobs();
-		broadcast_to_nodes(sock,"gpvdmnodekillall");
+		broadcast_to_nodes("gpvdmnodekillall");
 	}
 
 return -1;

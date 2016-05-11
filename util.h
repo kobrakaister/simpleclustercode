@@ -96,7 +96,7 @@ double jobs_cal_percent_finished();
 int jobs_remaining();
 void jobs_clear_all();
 int close_all_open();
-int broadcast_to_nodes(int sock,char *command);
+int broadcast_to_nodes(char *command);
 int cmp_node_killall(int sock,char *revbuf);
 int cmp_head_killall(int sock,char *revbuf);
 int cmp_node_sleep(int sock,char *revbuf);
@@ -118,7 +118,8 @@ void run_jobs();
 struct job* get_jobs_array();
 int get_njobs();
 int cmp_register_master(int sock,char *revbuf);
-int cmp_clean(int sock,char *revbuf);
+int cmp_master_clean(int sock,char *revbuf);
+int cmp_slave_clean(int sock,char *revbuf);
 
 void calpath_set_store_path(char *in);
 char* calpath_get_store_path();

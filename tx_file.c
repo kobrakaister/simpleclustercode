@@ -108,7 +108,7 @@ printf("end-sending to %d\n",sock);
 
 int send_file(int sockfd,char *base_name,char *file_name,char *target)
 {
-	printf("send:%s\n",file_name);
+
 	char rel_name[400];
 	char *buf=NULL;
 	int packet_size=0;
@@ -118,6 +118,8 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 	stat(file_name, &results);
 
 	packet_size=((((int)results.st_size)/((int)LENGTH))+2)*LENGTH;
+
+	printf("send: %d %d %s\n",results.st_size,packet_size,file_name);
 
 	buf=(char*)malloc(sizeof(char)*packet_size);
 	bzero(buf, packet_size);

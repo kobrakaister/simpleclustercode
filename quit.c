@@ -48,7 +48,7 @@ int cmp_head_quit(int sock,char *revbuf)
 {
 	if (cmpstr_min(revbuf,"gpvdmquit")==0)
 	{
-		broadcast_to_nodes(sock,"gpvdmquit");
+		broadcast_to_nodes("gpvdmquit");
 		exit(0);
 	}
 
