@@ -34,32 +34,34 @@
 #include <net/if.h>
 #include "inp.h"
 
-struct node_struct nodes[100];
-static int nnodes=0;
-
-int cmp_runjobs(int sock_han,char *revbuf)
+int send_ack()
 {
+	char buf[LENGTH];
 
-	char exe_name[200];
+	struct node_struct* master=NULL;
+	master=node_find_master();
 
-	if (cmpstr_min(revbuf,"gpvdmrunjobs")==0)
+	if (master!=NULL)
 	{
-		struct inp_file decode;
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,exe_name,"#exe_name");
 
+		bzero(buf, LENGTH);
 
-		calpath_set_exe_name(exe_name);
+		sprintf(buf,"gpvdm_ack\n");
 
-		printf("exe path set as %s\n",calpath_get_exe_name());
+		if(send_all(master->sock, buf, LENGTH*2,TRUE) < 0)
+		{
+			printf("%s\n", strerror(errno));
+			return -1;
+		}
 
-		copy_dir_to_all_nodes("src");
-		sleep(10);
-		run_jobs();
+		free(buf);
+	}else
+	{
+		return -1;
 	}
 
-return -1;
+return 0;
 }
+
+
 

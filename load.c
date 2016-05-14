@@ -59,20 +59,17 @@ return 0;
 
 int cmp_nodeload(int sock,char *revbuf)
 {
-	printf("rod 0\n");
 	char exe_name[200];
 	char dir_name[200];
 	char buf[LENGTH];
 	int cpus=0;
 
 	int ret=0;
-	printf("rod 1\n");
 	if (cmpstr_min(revbuf,"gpvdmnodegetload")==0)
 	{
 		ret=send_node_load(sock);
 		return ret;
 	}
-	printf("rod 2\n");
 return -1;
 }
 

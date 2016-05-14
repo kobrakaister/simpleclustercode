@@ -153,5 +153,9 @@ void decrypt(char *data,int round_len);
 int cmp_rxsetmaxloads(int sock,char *revbuf);
 void encrypt_load();
 int node_alive_time(struct node_struct* node);
+int send_ack();
+int recv_all(int sock,char *buf, int buf_len);
+int cmp_sync_packet_one(int sock_han,char *revbuf);
+int cal_abs_path_from_target(char *full_path,char *target,char *file_name);
 
 #endif

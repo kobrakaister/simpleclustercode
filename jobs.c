@@ -140,6 +140,30 @@ int finished=0;
 return 100.0*((double)finished)/((double)njobs);
 }
 
+int cal_abs_path_from_target(char *full_path,char *target,char *file_name)
+{
+char dest[200];
+struct job* job=NULL;
+
+	job=jobs_find_job(target);
+	if (job!=NULL)
+	{
+		strcpy(dest,job->name);
+	}else
+	if (strcmp(target,"")!=0)
+	{
+		strcpy(dest,target);
+	}else
+	{
+		printf("job for target '%s' not found\n",file_name);
+		return -1;
+	}
+
+	join_path(3,full_path,calpath_get_store_path(),dest,file_name);
+
+return 0;
+}
+
 struct job* jobs_find_job(char *target)
 {
 int i=0;

@@ -125,6 +125,8 @@ int sock=*((int*)s);
 
 		cmp_rxsetmaxloads(sock,revbuf);
 
+		cmp_sync_packet_one(sock,revbuf);
+
 		bzero(revbuf, LENGTH);
 
 	}

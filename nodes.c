@@ -300,7 +300,8 @@ int nodes_html_load(char *buf)
 	char temp[200];
 
 	strcpy(buf,"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<!DOCTYPE html><html><head>");
-	strcat(buf,"<title>Bye-bye baby bye-bye</title>");
+	strcat(buf,"<title>Cluster status</title>");
+	strcat(buf,"<meta http-equiv=\"refresh\" content=\"1\">");
 	strcat(buf,"<body>");
 	sprintf(temp,"<h1>Cluster status %d-%d-%d %d:%d:%d:</h1>", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 

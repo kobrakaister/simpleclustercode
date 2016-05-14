@@ -48,29 +48,14 @@ int stat_value;
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		//printf("%s\n",revbuf);
+		printf("%s\n",revbuf);
 		inp_search_string(&decode,save_name,"#file_name");
 		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
 		inp_search_int(&decode,&stat_value,"#stat");
 		//printf("'%s' '%s'\n",save_name,target);
-		struct job* job=NULL;
-		char dest[200];
-		job=jobs_find_job(target);
-		if (job!=NULL)
-		{
-			strcpy(dest,job->name);
-		}else
-		if (strcmp(target,"")!=0)
-		{
-			strcpy(dest,target);
-		}else
-		{
-			printf("job for target '%s' not found\n",revbuf);
-			return -1;
-		}
 
-		join_path(3,full_path,calpath_get_store_path(),dest,save_name);
+		cal_abs_path_from_target(full_path,target,save_name);
 		
 		count++;
 
@@ -87,6 +72,28 @@ int stat_value;
 	}
 
 return -1;
+}
+
+int recv_all(int sock,char *buf, int buf_len)
+{
+char *ptr=buf;
+int rx_len=0;
+int to_get=buf_len;
+int ret=0;
+
+while(rx_len<buf_len)
+{
+	ret = recv(sock, ptr, to_get, MSG_WAITALL);
+	if (ret<=0)
+	{
+		return ret;
+	}
+
+	ptr+=ret;
+	to_get-=ret;
+	rx_len+=ret;
+}
+return rx_len;
 }
 
 int file_rx_and_save(char *file_name,int sock_han,int size)
@@ -107,12 +114,13 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 		return (0);
 	}
 
-	f_block_sz = recv(sock_han, buf, buf_len, MSG_WAITALL);
+	f_block_sz = recv_all(sock_han, buf, buf_len);//recv(sock_han, buf, buf_len, MSG_WAITALL);
+
 	decrypt(buf,buf_len);
 
 	if(f_block_sz != buf_len)
 	{
-		printf("Not got all the data\n");
+		printf("Not got all the data %s %d %d\n",file_name,f_block_sz, buf_len);
 		return -1;
 	}
 
