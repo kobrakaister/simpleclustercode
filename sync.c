@@ -51,7 +51,7 @@ long l;
 char chkfile[100];
 unsigned char md5[16];
 
-
+//printf("%s\n",file_name);
 FILE *f = fopen(file_name, "rb");
 if (f==NULL)
 {
@@ -90,7 +90,7 @@ char full_path[400];
 
 	if (cmpstr_min(revbuf,"gpvdm_sync_packet_one")==0)
 	{
-		printf("rx sync packet\n");
+		printf("rx sync one packet\n");
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
@@ -141,7 +141,7 @@ char full_path[400];
 			{
 				break;
 			}
-			printf("a=%s\n",fname);
+
 			strcpy(fname_buf,fname);
 
 			md5  = inp_get_string(&decode);		
@@ -152,34 +152,37 @@ char full_path[400];
 			strcpy(md5_buf,md5);
 
 			cal_abs_path_from_target(full_path,target,fname_buf);
+			//printf("fname_buf=%s target=%s %s\n",fname_buf,target,full_path);
 
-			get_md5sum(file_sum,full_path);
-
-			int needed=TRUE;
-			printf("a=%s\n",file_sum);
-			printf("b=%s\n",md5_buf);
-
-			if (strcmp(file_sum,md5_buf)==0)
+			if (isdir(full_path)!=0)
 			{
-				needed=FALSE;
-			}
+				
+				get_md5sum(file_sum,full_path);
 
-			if (needed==TRUE)
-			{
-				sprintf(seg,"%s\n",fname_buf);
-				int seg_len=strlen(seg);
+				int needed=TRUE;
 
-				if (seg_len+pos>(len-LENGTH))
+				if (strcmp(file_sum,md5_buf)==0)
 				{
-					len+=LENGTH;
-					build=realloc(build,sizeof(char)*(len));
-					bzero((build+len-LENGTH), LENGTH);
-
+					needed=FALSE;
 				}
 
-				strcat((build+LENGTH),seg);
-				pos+=seg_len;
-				items++;
+				if (needed==TRUE)
+				{
+					sprintf(seg,"%s\n",fname_buf);
+					int seg_len=strlen(seg);
+
+					if (seg_len+pos>(len-LENGTH))
+					{
+						len+=LENGTH;
+						build=realloc(build,sizeof(char)*(len));
+						bzero((build+len-LENGTH), LENGTH);
+
+					}
+
+					strcat((build+LENGTH),seg);
+					pos+=seg_len;
+					items++;
+				}
 			}
 
 		}
@@ -189,8 +192,7 @@ char full_path[400];
 		}
 
 		sprintf(build,"gpvdm_sync_packet_two\n#size\n%d\n#target\n%s\n#src\n%s\n#end",pos,target,src);
-
-		printf("b=%s\n",(build+LENGTH));
+		//printf("Sending: %s\n",build);
 
 		sent=send_all(sock, build, len,TRUE);
 		if(sent < 0)
@@ -209,3 +211,150 @@ char full_path[400];
 return -1;
 }
 
+
+int tx_sync_packet_one(int sock,char *src, char* target)
+{
+struct inp_file decode;
+printf("tx_sync_packet_one\n");
+char *out=NULL;
+int len=LENGTH;
+int pos=0;
+char *file_name;
+char md5[100];
+char *packet=NULL;
+int packet_len=LENGTH*2;
+int packet_pos=LENGTH;
+char seg[1024];
+char full_path[1024];
+int sent=0;
+out=malloc(sizeof(char)*len);
+bzero(out, len);
+gen_dir_list(&out,&len,&pos,src,src);
+
+packet=malloc(packet_len*sizeof(char));
+bzero(packet, packet_len);
+
+inp_init(&decode);
+decode.data=out;
+decode.fsize=strlen(out);
+inp_reset_read(&decode);
+
+
+while(1)
+{
+	file_name  = inp_get_string(&decode);
+	if (file_name==NULL)
+	{
+		break;
+	}
+
+	cal_abs_path_from_target(full_path,target,file_name);
+	if (isfile(full_path)==0)
+	{
+		get_md5sum(md5,full_path);
+
+		sprintf(seg,"%s\n%s\n",file_name,md5);
+
+		int seg_len=strlen(seg);
+
+		if ((seg_len+packet_pos)>packet_len)
+		{
+			packet_len+=LENGTH;
+			packet=realloc(packet,sizeof(char)*(packet_len));
+		}
+
+		strcat((packet+LENGTH),seg);
+		packet_pos+=seg_len;
+	}
+
+}
+
+sprintf(packet,"gpvdm_sync_packet_one\n#size\n%d\n#target\n%s\n#src\n%s\n#end",packet_pos-LENGTH,target,src);
+//printf("tx_sync_packet_one data=%s\n",(packet+LENGTH));
+sent=send_all(sock, packet, packet_len,TRUE);
+
+free(packet);
+free(out);
+
+if(sent < 0)
+{
+	printf("%s\n", strerror(errno));
+	return -1;
+}
+
+
+
+return -1;
+}
+
+
+int cmp_sync_packet_two(int sock,char *revbuf)
+{
+struct inp_file decode;
+
+int save_size;
+int f_block_sz;
+char target[200];
+char src[200];
+char full_path[400];
+
+	if (cmpstr_min(revbuf,"gpvdm_sync_packet_two")==0)
+	{
+		printf("rx sync two packet %s\n",revbuf);
+		inp_init(&decode);
+		decode.data=revbuf;
+		decode.fsize=strlen(revbuf);
+
+		inp_search_int(&decode,&save_size,"#size");
+		inp_search_string(&decode,target,"#target");
+		inp_search_string(&decode,src,"#src");
+		
+		int buf_len=((save_size/LENGTH)+1)*LENGTH;
+		char *buf=malloc(buf_len*sizeof(char));
+		bzero(buf, buf_len);
+
+		f_block_sz = recv_all(sock, buf, buf_len);
+
+		decrypt(buf,buf_len);
+
+		if(f_block_sz != buf_len)
+		{
+			printf("Not got all the data from sync two packet%s %d %d\n",f_block_sz, buf_len);
+			return -1;
+		}
+
+		inp_init(&decode);
+		decode.data=buf;
+		decode.fsize=strlen(buf);
+
+		char *fname=NULL;
+		char fname_buf[400];
+
+		int items=0;
+
+		while(1)
+		{
+			fname  = inp_get_string(&decode);
+
+			if (fname==NULL)
+			{
+				break;
+			}
+
+			strcpy(fname_buf,fname);
+
+			cal_abs_path_from_target(full_path,target,fname_buf);
+
+			//printf("I would transmit %s %s %s\n",full_path,target,src);
+			send_file(sock,src,full_path,target);
+
+		}
+
+	free(buf);
+	printf("ended\n");
+	}
+	
+
+return 0;
+		
+}

@@ -199,6 +199,10 @@ int node()
 
 			cmp_slave_clean(sockfd,revbuf);
 
+			cmp_sync_packet_one(sockfd,revbuf);
+
+			cmp_sync_packet_two(sockfd,revbuf);
+
 			if(f_block_sz < 0)
 			{
 				printf(" %s\n", strerror(errno));

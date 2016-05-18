@@ -86,7 +86,7 @@ int cmp_node_runjob(int sock,char *revbuf)
 			char command[400];
 			join_path(3,full_exe_path,calpath_get_store_path(), "src",exe_name);
 			join_path(2,lib_path,calpath_get_store_path(), "src");
-			sprintf(command,"export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%s;%s",lib_path,full_exe_path);
+			sprintf(command,"export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%s;stdbuf -i0 -o0 -e0 %s",lib_path,full_exe_path);
 			printf("full command =%s\n",command);
 			system(command);
 			

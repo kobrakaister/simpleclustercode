@@ -32,6 +32,7 @@
 #include "util.h"
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include "tx_packet.h"
 
 struct job jobs[1000];
 static int njobs=0;
@@ -51,6 +52,36 @@ char target[400];
 		inp_search_string(&decode,target,"#target");
 		jobs_add(job_name,target);
 		jobs_print();
+		return 0;
+	}
+
+return -1;
+}
+
+int cmp_send_job_list(int sock,char *revbuf)
+{
+int i;
+char temp[1000];
+char buf[5000];
+strcpy(buf,"");
+
+	if (cmpstr_min(revbuf,"gpvdm_send_job_list")==0)
+	{
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdm_job_list");
+
+		sprintf(buf,"n\tname\tdone\tstatus\ttarget\t\t\t\t\tip\tcopystate\n");
+
+		for (i=0;i<njobs;i++)
+		{
+			sprintf(temp,"%d\t%s\t%d\t%d\t%s\t%s\t%d\n",i,jobs[i].name,jobs[i].done,jobs[i].status,jobs[i].target,jobs[i].ip,jobs[i].copy_state);
+			strcat(buf,temp);
+		}
+
+		tx_set_size(&packet,strlen(buf));
+		tx_packet(sock,&packet,buf);
+
 		return 0;
 	}
 

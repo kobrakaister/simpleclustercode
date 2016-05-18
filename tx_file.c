@@ -35,9 +35,83 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "tx_packet.h"
+
+void strip_slash(char *in)
+{
+int delta=0;
+char temp[1024];
+bzero(temp, 1024);
+strcpy(temp,in);
+while(in[delta]=='/')
+{
+	delta++;
+}
+strcpy(in,temp+delta);
+}
+
+int gen_dir_list(char ** out,int *len,int *pos,const char *path,char *base_path)
+{
+
+    DIR *dir;
+	char next_path[1024];
+	char full_path[1024];
+	char seg[1024];
+	int path_ofset=strlen(base_path);
+    struct dirent *entry;
+
+    if (!(dir = opendir(path)))
+	{
+        return -1;
+	}
+
+    if (!(entry = readdir(dir)))
+	{
+        return -1;
+	}
+
+    do
+	{
+		if (entry->d_type == DT_DIR)
+		{
+
+			join_path(2,next_path,path, entry->d_name);
+
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			{
+                continue;
+			}
+            gen_dir_list(out,len,pos,next_path,base_path);
+        }else
+        {
+			join_path(2,full_path,path, entry->d_name);
+			//printf("%s\n", full_path);
+
+			sprintf(seg,"%s\n",full_path+path_ofset);
+			strip_slash(seg);
+			//printf("adding: %s\n", seg);
+			int seg_len=strlen(seg);
+
+			if (seg_len+(*pos)>(*len))
+			{
+				(*len)+=LENGTH;
+				*out=realloc(*out,sizeof(char)*(*len));
+			}
+
+			strcat(*out,seg);
+			(*pos)+=seg_len;
+
+		}
+    }while (entry = readdir(dir));
+
+    closedir(dir);
+
+return 0;
+}
 
 int send_dir(int sockfd,const char *name, int level,char *base_name, char* target)
 {
+
     DIR *dir;
     struct dirent *entry;
 
@@ -67,8 +141,9 @@ int send_dir(int sockfd,const char *name, int level,char *base_name, char* targe
         {
 			char full_path[500];
 			join_path(2,full_path,name, entry->d_name);
+			printf("sending now: %s\n", full_path);
 			send_file(sockfd,base_name, full_path,target);
-			//printf("%s\n", full_path);
+
 		}
     }while (entry = readdir(dir));
 
@@ -78,7 +153,7 @@ return 0;
 
 int send_all(int sock, void *buffer, int length, int encode)
 {
-printf("sending to %d\n",sock);
+//printf("sending to %d\n",sock);
 	if (encode==TRUE)
 	{
 		encrypt(buffer,LENGTH);
@@ -102,32 +177,31 @@ printf("sending to %d\n",sock);
                 printf("RESEND %d %d\n",length,orig_length);
         }
     }
-printf("end-sending to %d\n",sock);
+//printf("end-sending to %d\n",sock);
     return 0;
 }
 
 int send_file(int sockfd,char *base_name,char *file_name,char *target)
 {
+struct stat results;
+struct tx_struct packet;
+char rel_name[400];
+char *buf=NULL;
 
-	char rel_name[400];
-	char *buf=NULL;
-	int packet_size=0;
-	strcpy(rel_name,file_name+strlen(base_name));
-
-	struct stat results;
-	stat(file_name, &results);
-
-	packet_size=((((int)results.st_size)/((int)LENGTH))+2)*LENGTH;
-
-	printf("send: %d %d %s\n",results.st_size,packet_size,file_name);
-
-	buf=(char*)malloc(sizeof(char)*packet_size);
-	bzero(buf, packet_size);
-	//printf("gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#end",rel_name,results.st_size,target);
-	sprintf(buf,"gpvdmfile\n#file_name\n%s\n#file_size\n%d\n#target\n%s\n#stat\n%d\n#end",rel_name,results.st_size,target,results.st_mode);
+tx_struct_init(&packet);
+tx_set_id(&packet,"gpvdmfile");
+stat(file_name, &results);
+strcpy(rel_name,file_name+strlen(base_name));
+tx_set_file_name(&packet,rel_name);
+tx_set_target(&packet,target);
+tx_set_size(&packet,results.st_size);
+tx_set_stat(&packet,results.st_mode);
 
 	if (results.st_size>0)
 	{
+		buf=(char*)malloc(sizeof(char)*results.st_size);
+		bzero(buf, results.st_size);
+
 		int f_block_sz = 0;
 
 		FILE *fp=NULL;
@@ -139,7 +213,7 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 			return -1;
 		}
 
-		f_block_sz = fread((buf+LENGTH), sizeof(char), results.st_size, fp);
+		f_block_sz = fread(buf, sizeof(char), results.st_size, fp);
 
 		if (f_block_sz!=results.st_size)
 		{
@@ -150,13 +224,7 @@ int send_file(int sockfd,char *base_name,char *file_name,char *target)
 		fclose(fp);
 	}
 
-	int sent=0;
-	sent=send_all(sockfd, buf, packet_size,TRUE);
-    if(sent < 0)
-    {
-		printf("%s\n", strerror(errno));
-	    return -1;
-    }
+	tx_packet(sockfd,&packet,buf);
 
 	free(buf);
 

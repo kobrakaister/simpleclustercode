@@ -34,6 +34,9 @@
 #include <net/if.h>
 #include "inp.h"
 #include<pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 struct node_struct nodes[100];
 static int nnodes=0;
@@ -418,6 +421,7 @@ int i=0;
 					printf("sending dir %s to %s\n",dir,nodes[i].ip);
 					printf("Send to %s\n",full_path);
 					send_dir(nodes[i].sock,full_path, 0,full_path,dir);
+					//tx_sync_packet_one(nodes[i].sock,full_path, dir);
 
 				}
 			}
@@ -463,6 +467,7 @@ printf("here xxx\n");
 						printf("sending job to %s\n",nodes[i].ip);
 						join_path(2,full_path,calpath_get_store_path(), next->name);
 
+						//tx_sync_packet_one(nodes[i].sock,full_path, next->name);
 						send_dir(nodes[i].sock,full_path, 0,full_path,next->name);
 
 						send_command(nodes[i].sock,calpath_get_exe_name(),next->name,next->cpus_needed);

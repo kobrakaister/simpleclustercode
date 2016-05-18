@@ -127,6 +127,10 @@ int sock=*((int*)s);
 
 		cmp_sync_packet_one(sock,revbuf);
 
+		cmp_sync_packet_two(sock,revbuf);
+
+		cmp_send_job_list(sock,revbuf);
+
 		bzero(revbuf, LENGTH);
 
 	}

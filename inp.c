@@ -31,7 +31,9 @@
 #include "util.h"
 #include <linux/limits.h>
 
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 
@@ -118,17 +120,22 @@ return -1;
 
 int isfile(char *in)
 {
-FILE *f = fopen(in, "r");
+    struct stat path_stat;
+    if (stat(in, &path_stat)!=0)
+	{
+		return -1;
+	}
+	int ret=0;
+	ret=S_ISREG(path_stat.st_mode);
+	if (ret==0)
+	{
+		return -1;
+	}
 
-if (f==NULL)
-{
-	return -1;
+    return 0;
+
 }
 
-fclose(f);
-return 0;
-
-}
 
 int zip_is_in_archive(char *full_file_name)
 {

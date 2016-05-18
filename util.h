@@ -51,7 +51,7 @@ struct node_struct
 	time_t alive;
 };
 
-
+int cmp_send_job_list(int sock_han,char *revbuf);
 int nodes_html_load(char *buf);
 void stop_all_jobs();
 void calpath_set_exe_name(char *in);
@@ -157,5 +157,7 @@ int send_ack();
 int recv_all(int sock,char *buf, int buf_len);
 int cmp_sync_packet_one(int sock_han,char *revbuf);
 int cal_abs_path_from_target(char *full_path,char *target,char *file_name);
-
+int gen_dir_list(char ** out,int *len,int *pos,const char *path,char *base_path);
+int tx_sync_packet_one(int sock,char *src, char* target);
+int cmp_sync_packet_two(int sock,char *revbuf);
 #endif

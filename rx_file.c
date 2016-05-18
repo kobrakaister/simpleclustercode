@@ -48,7 +48,7 @@ int stat_value;
 		inp_init(&decode);
 		decode.data=revbuf;
 		decode.fsize=strlen(revbuf);
-		printf("%s\n",revbuf);
+		//printf("%s\n",revbuf);
 		inp_search_string(&decode,save_name,"#file_name");
 		inp_search_string(&decode,target,"#target");
 		inp_search_int(&decode,&save_size,"#file_size");
@@ -60,6 +60,7 @@ int stat_value;
 		count++;
 
 		get_dir_name_from_path(dir_name, full_path);
+		printf("file: %s %s\n",dir_name, full_path);
 
 		file_rx_and_save(full_path,sock_han,save_size);
 
@@ -106,6 +107,7 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 	int f_block_sz=0;
 	int write_block_size=0;
 	int written=0;
+	int write_sz=0;
 
 	FILE *fp = fopen(file_name, "w");
 	if(fp == NULL)
@@ -114,17 +116,20 @@ int file_rx_and_save(char *file_name,int sock_han,int size)
 		return (0);
 	}
 
-	f_block_sz = recv_all(sock_han, buf, buf_len);//recv(sock_han, buf, buf_len, MSG_WAITALL);
-
-	decrypt(buf,buf_len);
-
-	if(f_block_sz != buf_len)
+	if (size!=0)
 	{
-		printf("Not got all the data %s %d %d\n",file_name,f_block_sz, buf_len);
-		return -1;
+		f_block_sz = recv_all(sock_han, buf, buf_len);
+
+		decrypt(buf,buf_len);
+
+		if(f_block_sz != buf_len)
+		{
+			printf("Not got all the data %s %d %d\n",file_name,f_block_sz, buf_len);
+			return -1;
+		}
+		write_sz = fwrite(buf, sizeof(char), size, fp);
 	}
 
-	int write_sz = fwrite(buf, sizeof(char), size, fp);
 
 	if(write_sz != size)
 	{
