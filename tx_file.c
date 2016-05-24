@@ -151,35 +151,6 @@ int send_dir(int sockfd,const char *name, int level,char *base_name, char* targe
 return 0;
 }
 
-int send_all(int sock, void *buffer, int length, int encode)
-{
-//printf("sending to %d\n",sock);
-	if (encode==TRUE)
-	{
-		encrypt(buffer,LENGTH);
-	
-
-		if (length>LENGTH)
-		{
-			encrypt((buffer+LENGTH),(length-LENGTH));
-		}
-	}
-    int orig_length=length;
-    char *ptr = (char*) buffer;
-    while (length > 0)
-    {
-        int i = send(sock, ptr, length, 0);
-        if (i < 1) return -1;
-        ptr += i; 
-        length -= i;
-        if (length!=0)
-        {
-                printf("RESEND %d %d\n",length,orig_length);
-        }
-    }
-//printf("end-sending to %d\n",sock);
-    return 0;
-}
 
 int send_file(int sockfd,char *base_name,char *file_name,char *target)
 {
@@ -196,6 +167,7 @@ tx_set_file_name(&packet,rel_name);
 tx_set_target(&packet,target);
 tx_set_size(&packet,results.st_size);
 tx_set_stat(&packet,results.st_mode);
+tx_set_zip(&packet,1);
 
 	if (results.st_size>0)
 	{

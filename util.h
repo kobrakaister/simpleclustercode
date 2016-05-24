@@ -125,6 +125,7 @@ void calpath_set_store_path(char *in);
 char* calpath_get_store_path();
 int cmp_runjobs(int sock_han,char *revbuf);
 struct job* jobs_find_job(char *name);
+int cmp_head_stop_all_jobs(int sock,char *revbuf);
 
 
 
@@ -153,11 +154,12 @@ void decrypt(char *data,int round_len);
 int cmp_rxsetmaxloads(int sock,char *revbuf);
 void encrypt_load();
 int node_alive_time(struct node_struct* node);
-int send_ack();
+int send_message(char *message);
 int recv_all(int sock,char *buf, int buf_len);
 int cmp_sync_packet_one(int sock_han,char *revbuf);
 int cal_abs_path_from_target(char *full_path,char *target,char *file_name);
 int gen_dir_list(char ** out,int *len,int *pos,const char *path,char *base_path);
 int tx_sync_packet_one(int sock,char *src, char* target);
 int cmp_sync_packet_two(int sock,char *revbuf);
+int cmp_delete_all_jobs(int sock,char *revbuf);
 #endif

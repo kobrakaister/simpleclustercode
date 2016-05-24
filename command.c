@@ -137,6 +137,8 @@ int cmp_head_exe(int sock,char *revbuf)
 
 			system(command);
 
+			send_message("head node says done.");
+
 			 _exit(EXIT_SUCCESS);
 		}
 	}

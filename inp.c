@@ -521,24 +521,24 @@ ewe("token %s not found in file %s '%s'\n",token,in->full_name,in->data);
 }
 
 
-void inp_search_int(struct inp_file *in,int* out,char* token)
+int inp_search_int(struct inp_file *in,int* out,char* token)
 {
 char temp[200];
 if (inp_search(temp,in,token)==0)
 {
 	sscanf(temp,"%d",out);
-	return;
+	return 0;
 }
-ewe("token %s not found in file %s\n",token,in->full_name);
+return -1;
 }
 
-void inp_search_string(struct inp_file *in,char* out,char* token)
+int inp_search_string(struct inp_file *in,char* out,char* token)
 {
 if (inp_search(out,in,token)==0)
 {
-	return;
+	return 0;
 }
-ewe("token %s not found in file %s '%s'\n",token,in->full_name,in->data);
+return -1;
 }
 
 void inp_check(struct inp_file *in,double ver)

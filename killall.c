@@ -50,10 +50,38 @@ int cmp_head_killall(int sock,char *revbuf)
 	if (cmpstr_min(revbuf,"gpvdmkillall")==0)
 	{
 		//copy_dir_to_all_nodes("src");
-		stop_all_jobs();
 		broadcast_to_nodes("gpvdmnodekillall");
 	}
 
 return -1;
 }
 
+int cmp_head_stop_all_jobs(int sock,char *revbuf)
+{
+	if (cmpstr_min(revbuf,"stop_all_jobs")==0)
+	{
+		stop_all_jobs();
+	}
+
+return -1;
+}
+
+int cmp_delete_all_jobs(int sock,char *revbuf)
+{
+	if (cmpstr_min(revbuf,"delete_all_jobs")==0)
+	{
+		jobs_clear_all();
+	}
+
+return -1;
+}
+
+int cmp_head_stop_running_jobs(int sock,char *revbuf)
+{
+	if (cmpstr_min(revbuf,"stop_all_jobs")==0)
+	{
+		stop_all_jobs();
+	}
+
+return -1;
+}

@@ -34,6 +34,7 @@
 #include <net/if.h>
 #include "inp.h"
 #include <time.h>
+#include "tx_packet.h"
 
 struct node_struct nodes[100];
 static int nnodes=0;
@@ -109,4 +110,73 @@ int cmp_rxloadstats(int sock,char *revbuf)
 
 return -1;
 }
+
+int cmp_rxsetmaxloads(int sock,char *revbuf)
+{
+//printf("test send list %s\n",revbuf);
+char buf[LENGTH];
+int i;
+char *node_ip=NULL;
+char node_buf[100];
+char *max_load=NULL;
+char max_buf[100];
+int cpus=0.0;
+int ret=0;
+
+	if (cmpstr_min(revbuf,"gpvdm_set_max_loads")==0)
+	{
+		struct tx_struct data;
+		char *buf=NULL;
+		ret=rx_packet(sock,&data,revbuf);
+
+		printf("rod %s %s\n",revbuf,data.data);
+		struct inp_file in;
+		inp_init(&in);
+		in.data=data.data;
+		in.fsize=data.size;
+		inp_reset_read(&in);
+
+		max_load  = (char*)-1;
+
+		while(max_load!=NULL)
+		{
+			node_ip  = inp_get_string(&in);
+			if (node_ip==NULL)
+			{
+				break;
+			}
+			strcpy(node_buf,node_ip);
+
+			max_load  = inp_get_string(&in);		
+			if (max_load==NULL)
+			{
+				break;
+			}
+			strcpy(max_buf,max_load);
+
+			printf("node ip %s\n",node_buf);
+			printf("max_load %s\n",max_buf);
+			struct node_struct* node=NULL;
+			node=node_find(node_buf);
+
+			if (node==NULL)
+			{
+				printf("I can't find IP %s\n",node_buf);
+			}
+
+			sscanf(max_buf,"%d",&cpus);
+			printf("max found as%d %s\n",cpus,node->host_name);
+			node->max_cpus=cpus;
+
+			nodes_print();
+		}
+
+		nodes_print();
+
+		return 0;
+	}
+
+return -1;
+}
+
 

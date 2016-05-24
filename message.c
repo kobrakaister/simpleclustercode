@@ -32,69 +32,32 @@
 #include "util.h"
 #include <sys/ioctl.h>
 #include <net/if.h>
-#include <sys/stat.h>
-
+#include "inp.h"
 #include "tx_packet.h"
 
-static int count=0;
-int cmp_rxfile(int sock,char *revbuf)
+int send_message(char *message)
 {
-int ret=0;
-struct inp_file decode;
-char dir_name[400];
-char full_path[400]; //full path
+	char buf[LENGTH];
 
-	if (cmpstr_min(revbuf,"gpvdmfile")==0)
+	struct node_struct* master=NULL;
+	master=node_find_master();
+
+	if (master!=NULL)
 	{
-		struct tx_struct data;
-		char *buf=NULL;
-		ret=rx_packet(sock,&data,revbuf);
-		//printf("rod: %d %s\n",ret,data.file_name);
-		if (ret>=0)
-		{
-			cal_abs_path_from_target(full_path,data.target,data.file_name);
-			get_dir_name_from_path(dir_name, full_path);
 
-			mkdirs(full_path);
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdm_message");
+		strcpy(packet.message,message);
+		tx_packet(master->sock,&packet,buf);
 
-			printf("file: %s %s\n",dir_name, full_path);
-
-
-			FILE *fp = fopen(full_path, "w");
-
-			if(fp == NULL)
-			{
-				printf("the error is %s\n", strerror(errno));
-				return (0);
-			}
-
-			if (data.size>0)
-			{
-				fwrite(data.data, sizeof(char), data.size, fp);
-			}
-
-			fclose(fp);
-
-
-			if (data.stat!=0)
-			{
-				chmod(full_path,data.stat);
-			}
-
-			if (data.size>0)
-			{
-				free(data.data);
-				data.data=NULL;
-			}
-
-			count++;
-			return 0;
-		}
-		
-		
+	}else
+	{
+		return -1;
 	}
 
-return -1;
+return 0;
 }
+
 
 

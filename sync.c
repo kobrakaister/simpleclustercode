@@ -38,6 +38,8 @@
 #include <openssl/aes.h>
 #include <openssl/sha.h>
 
+#include "tx_packet.h"
+
 static int count=0;
 
 
@@ -81,49 +83,34 @@ return;
 int cmp_sync_packet_one(int sock,char *revbuf)
 {
 struct inp_file decode;
-
-int save_size;
+int ret=0;
 int f_block_sz;
-char target[200];
-char src[200];
 char full_path[400];
+struct tx_struct data;
 
 	if (cmpstr_min(revbuf,"gpvdm_sync_packet_one")==0)
 	{
-		printf("rx sync one packet\n");
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
+		printf("gpvdm_sync_packet_one\n");
+		tx_struct_init(&data);
+		ret=rx_packet(sock,&data,revbuf);
 
-		inp_search_int(&decode,&save_size,"#size");
-		inp_search_string(&decode,target,"#target");
-		inp_search_string(&decode,src,"#src");
-
-		int buf_len=((save_size/LENGTH)+1)*LENGTH;
-		char *buf=malloc(buf_len*sizeof(char));
-		bzero(buf, buf_len);
-
-		f_block_sz = recv_all(sock, buf, buf_len);
-
-		decrypt(buf,buf_len);
-
-		if(f_block_sz != buf_len)
+		if(ret<0)
 		{
-			printf("Not got all the data %s %d %d\n",f_block_sz, buf_len);
+			printf("Not got all the data! \n");
 			return -1;
 		}
 
 		inp_init(&decode);
-		decode.data=buf;
-		decode.fsize=strlen(buf);
-
+		decode.data=data.data;
+		decode.fsize=strlen(data.data);
+		//printf("a got data%s\n",data.data);
 		char *fname=(char *)-1;
 		char fname_buf[400];
 
 		char *md5=(char *)-1;
 		char md5_buf[400];
 		char *build=NULL;
-		int len=LENGTH*2;
+		int len=LENGTH;
 		build=malloc(sizeof(char)*len);
 		bzero(build, len);
 
@@ -151,8 +138,7 @@ char full_path[400];
 			}
 			strcpy(md5_buf,md5);
 
-			cal_abs_path_from_target(full_path,target,fname_buf);
-			//printf("fname_buf=%s target=%s %s\n",fname_buf,target,full_path);
+			cal_abs_path_from_target(full_path,data.target,fname_buf);
 
 			if (isdir(full_path)!=0)
 			{
@@ -171,15 +157,15 @@ char full_path[400];
 					sprintf(seg,"%s\n",fname_buf);
 					int seg_len=strlen(seg);
 
-					if (seg_len+pos>(len-LENGTH))
+					if (seg_len+pos>len)
 					{
 						len+=LENGTH;
-						build=realloc(build,sizeof(char)*(len));
+						build=realloc(build,sizeof(char)*len);
 						bzero((build+len-LENGTH), LENGTH);
 
 					}
 
-					strcat((build+LENGTH),seg);
+					strcat(build,seg);
 					pos+=seg_len;
 					items++;
 				}
@@ -191,18 +177,17 @@ char full_path[400];
 			pos=pos-1;
 		}
 
-		sprintf(build,"gpvdm_sync_packet_two\n#size\n%d\n#target\n%s\n#src\n%s\n#end",pos,target,src);
-		//printf("Sending: %s\n",build);
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdm_sync_packet_two");
+		tx_set_size(&packet,pos);
+		tx_set_target(&packet,data.target);
+		tx_set_src(&packet,data.src);
 
-		sent=send_all(sock, build, len,TRUE);
-		if(sent < 0)
-		{
-			printf("%s\n", strerror(errno));
-			return -1;
-		}
+		tx_packet(sock,&packet,build);
 
 		free(build);
-		free(buf);		
+		free(data.data);		
 
 		return 0;
 		
@@ -222,8 +207,8 @@ int pos=0;
 char *file_name;
 char md5[100];
 char *packet=NULL;
-int packet_len=LENGTH*2;
-int packet_pos=LENGTH;
+int packet_len=LENGTH;
+int packet_pos=0;
 char seg[1024];
 char full_path[1024];
 int sent=0;
@@ -263,26 +248,23 @@ while(1)
 			packet=realloc(packet,sizeof(char)*(packet_len));
 		}
 
-		strcat((packet+LENGTH),seg);
+		strcat(packet,seg);
 		packet_pos+=seg_len;
 	}
 
 }
 
-sprintf(packet,"gpvdm_sync_packet_one\n#size\n%d\n#target\n%s\n#src\n%s\n#end",packet_pos-LENGTH,target,src);
-//printf("tx_sync_packet_one data=%s\n",(packet+LENGTH));
-sent=send_all(sock, packet, packet_len,TRUE);
+struct tx_struct packet_header;
+tx_struct_init(&packet_header);
+tx_set_id(&packet_header,"gpvdm_sync_packet_one");
+tx_set_size(&packet_header,packet_pos);
+tx_set_target(&packet_header,target);
+tx_set_src(&packet_header,src);
+
+tx_packet(sock,&packet_header,packet);
 
 free(packet);
 free(out);
-
-if(sent < 0)
-{
-	printf("%s\n", strerror(errno));
-	return -1;
-}
-
-
 
 return -1;
 }
@@ -292,40 +274,28 @@ int cmp_sync_packet_two(int sock,char *revbuf)
 {
 struct inp_file decode;
 
-int save_size;
 int f_block_sz;
-char target[200];
-char src[200];
 char full_path[400];
+int ret=0;
 
+	struct tx_struct data;
 	if (cmpstr_min(revbuf,"gpvdm_sync_packet_two")==0)
 	{
 		printf("rx sync two packet %s\n",revbuf);
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
 
-		inp_search_int(&decode,&save_size,"#size");
-		inp_search_string(&decode,target,"#target");
-		inp_search_string(&decode,src,"#src");
-		
-		int buf_len=((save_size/LENGTH)+1)*LENGTH;
-		char *buf=malloc(buf_len*sizeof(char));
-		bzero(buf, buf_len);
+		tx_struct_init(&data);
+		ret=rx_packet(sock,&data,revbuf);
 
-		f_block_sz = recv_all(sock, buf, buf_len);
-
-		decrypt(buf,buf_len);
-
-		if(f_block_sz != buf_len)
+		if(ret<0)
 		{
-			printf("Not got all the data from sync two packet%s %d %d\n",f_block_sz, buf_len);
+			printf("Not got all the data! \n");
 			return -1;
 		}
 
 		inp_init(&decode);
-		decode.data=buf;
-		decode.fsize=strlen(buf);
+		decode.data=data.data;
+		decode.fsize=strlen(data.data);
+
 
 		char *fname=NULL;
 		char fname_buf[400];
@@ -343,14 +313,13 @@ char full_path[400];
 
 			strcpy(fname_buf,fname);
 
-			cal_abs_path_from_target(full_path,target,fname_buf);
+			cal_abs_path_from_target(full_path,data.target,fname_buf);
 
-			//printf("I would transmit %s %s %s\n",full_path,target,src);
-			send_file(sock,src,full_path,target);
+			send_file(sock,data.src,full_path,data.target);
 
 		}
 
-	free(buf);
+	free(data.data);
 	printf("ended\n");
 	}
 	

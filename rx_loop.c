@@ -131,6 +131,10 @@ int sock=*((int*)s);
 
 		cmp_send_job_list(sock,revbuf);
 
+		cmp_head_stop_all_jobs(sock,revbuf);
+
+		cmp_delete_all_jobs(sock,revbuf);
+
 		bzero(revbuf, LENGTH);
 
 	}

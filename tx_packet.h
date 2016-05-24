@@ -19,6 +19,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "tx_packet.h"
+#include "zlib.h"
+
 struct tx_struct
 {
 char id[100];
@@ -26,8 +29,11 @@ char src[100];
 char file_name[100];
 int size;
 char target[100];
+char message[200];
 int stat;
-int compressed;
+int zip;
+char *data;
+int uzipsize;
 };
 
 void tx_struct_init(struct tx_struct *in);
@@ -37,4 +43,8 @@ int tx_packet(int sock,struct tx_struct *in,char *buf);
 void tx_set_file_name(struct tx_struct *in,char *file_name);
 void tx_set_target(struct tx_struct *in,char *target);
 void tx_set_stat(struct tx_struct *in,int stat_in);
+int rx_packet(int sock,struct tx_struct *in,char *buf);
+void tx_set_src(struct tx_struct *in,char *src);
+void tx_set_zip(struct tx_struct *in,int zip);
+void tx_set_uzipsize(struct tx_struct *in,int uzipsize);
 #endif
