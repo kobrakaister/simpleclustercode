@@ -94,6 +94,10 @@ void tx_struct_init(struct tx_struct *in)
 	strcpy(in->message,"");
 	in->size=0;
 	strcpy(in->target,"");
+	in->load0=-1.0;
+	in->load1=-1.0;
+	in->load2=-1.0;
+	strcpy(in->ip,"");
 	in->stat=0;
 	in->data=NULL;
 	in->zip=0;
@@ -147,20 +151,20 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 	char *zbuf=NULL;
 	int packet_size=0;
 
-	if (in->zip==1)
-	{
-		long unsigned int comp_size=0;
-		comp_size=(int)in->size+200;
-		zbuf=malloc(sizeof(char)*comp_size);
-		bzero(zbuf, comp_size);
-		int ret=compress(zbuf, &comp_size, buf, in->size);
-		in->uzipsize=in->size;
-		in->size=(int)comp_size;
-		printf("%d %d %d\n",comp_size,in->uzipsize,ret);
-	}
-
 	if (in->size>0)
 	{
+		if (in->zip==1)
+		{
+			long unsigned int comp_size=0;
+			comp_size=(int)in->size+200;
+			zbuf=malloc(sizeof(char)*comp_size);
+			bzero(zbuf, comp_size);
+			int ret=compress(zbuf, &comp_size, buf, in->size);
+			in->uzipsize=in->size;
+			in->size=(int)comp_size;
+			printf("%d %d %d\n",comp_size,in->uzipsize,ret);
+		}
+
 		packet_size=((((int)in->size)/((int)LENGTH))+2)*LENGTH;
 	}else
 	{
@@ -205,10 +209,32 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 		strcat(packet,temp);
 	}
 
+	if (in->load0!=-1.0)
+	{
+		sprintf(temp,"#load0\n%.3lf\n",in->load0);
+		strcat(packet,temp);
+	}
+
+	if (in->load1!=-1.0)
+	{
+		sprintf(temp,"#load1\n%.3lf\n",in->load1);
+		strcat(packet,temp);
+	}
+
+	if (in->load2!=-1.0)
+	{
+		sprintf(temp,"#load2\n%.3lf\n",in->load2);
+		strcat(packet,temp);
+	}
+
+	if (strcmp(in->ip,"")!=0)
+	{
+		sprintf(temp,"#ip\n%s\n",in->ip);
+		strcat(packet,temp);
+	}
+
 	sprintf(temp,"#end");
 	strcat(packet,temp);
-
-	//sprintf(packet,"%s\n#file_name\n%s\n#size\n%d\n#target\n%s\n#stat\n%d\n#src\n%s\n#end",in->id,in->file_name,in->size,in->target,in->stat,in->src);
 
 	//printf("sending %s\n",packet);
 	encrypt(packet,LENGTH);
@@ -261,6 +287,10 @@ int rx_packet(int sock,struct tx_struct *in,char *buf)
 	inp_search_int(&decode,&(in->stat),"#stat");
 	inp_search_int(&decode,&(in->zip),"#zip");
 	inp_search_int(&decode,&(in->uzipsize),"#uzipsize");
+	inp_search_double(&decode,&(in->load0),"#load0");
+	inp_search_double(&decode,&(in->load1),"#load1");
+	inp_search_double(&decode,&(in->load2),"#load2");
+	inp_search_string(&decode,in->ip,"#ip");
 
 	char *packet=NULL;
 	int packet_size=0;

@@ -509,7 +509,7 @@ void inp_free(struct inp_file *in)
 }
 
 
-void inp_search_double(struct inp_file *in,double* out,char* token)
+int inp_search_double(struct inp_file *in,double* out,char* token)
 {
 char temp[200];
 if (inp_search(temp,in,token)==0)
@@ -517,7 +517,7 @@ if (inp_search(temp,in,token)==0)
 	sscanf(temp,"%le",out);
 	return;
 }
-ewe("token %s not found in file %s '%s'\n",token,in->full_name,in->data);
+return -1;
 }
 
 

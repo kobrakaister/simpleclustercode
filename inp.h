@@ -30,7 +30,7 @@ void inp_init(struct inp_file *in);
 int inp_aes_load(struct inp_file *in,char *path,char *file,char *key);
 int inp_load(struct inp_file *in,char *file);
 void inp_free(struct inp_file *in);
-void inp_search_double(struct inp_file *in,double* out,char* token);
+int inp_search_double(struct inp_file *in,double* out,char* token);
 int inp_search_int(struct inp_file *in,int* out,char* token);
 int inp_search_string(struct inp_file *in,char* out,char* token);
 int inp_search(char* out,struct inp_file *in,char *token);
