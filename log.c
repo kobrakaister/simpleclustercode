@@ -17,43 +17,51 @@
 // FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 // more details.
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <netdb.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <sys/wait.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include "inp.h"
+#include <errno.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+
 #include "util.h"
-#include <sys/ioctl.h>
-#include <net/if.h>
 #include "inp.h"
 
-int cmp_node_sleep(int sock,struct tx_struct *data)
+static int global_sock=0;
+
+
+void log_alarm_wakeup (int i)
 {
-	if (cmpstr_min(data->id,"gpvdmnodesleep")==0)
-	{
-		printf("sleep\n");
-	}
+		int ii;
+		FILE *out;
+		struct node_struct *nodes=nodes_list();
+		struct itimerval tout_val;
 
-return -1;
-}
+		signal(SIGALRM,log_alarm_wakeup);
 
-int cmp_head_sleep(int sock,struct tx_struct *data)
-{
-	if (cmpstr_min(data->id,"gpvdmsleep")==0)
-	{
-		struct tx_struct packet;
-		tx_struct_init(&packet);
-		tx_set_id(&packet,"gpvdmnodesleep");
-		broadcast_to_nodes(&packet);
-	}
+		tout_val.it_interval.tv_sec = 0;
+		tout_val.it_interval.tv_usec = 0;
+		tout_val.it_value.tv_sec = 60;
+		tout_val.it_value.tv_usec = 0;
 
-return -1;
+		char path[200];
+		for (ii=0;ii<nodes_get_nnodes();ii++)
+		{
+			sprintf(path,"logs/%s",nodes[ii].ip);
+			out=fopen(path,"a");
+			fprintf(out,"%lf\n",nodes[ii].load0);
+			fclose(out);
+		}
+
+		setitimer(ITIMER_REAL, &tout_val,0);
 }
 

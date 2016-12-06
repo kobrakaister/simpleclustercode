@@ -33,40 +33,27 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "inp.h"
+#include "tx_packet.h"
 
-
-int cmp_node_send_data(int sock,char *revbuf)
+int cmp_node_send_data(int sock,struct tx_struct *data)
 {
-	int njobs=0;
 	struct job* jobs=NULL;
-	char buf[512];
-	char job_name[100];
 	char full_path[200];
-	int state_changed=FALSE;
-	if (cmpstr_min(revbuf,"gpvdmnodesenddata")==0)
+	int ret=0;
+	struct tx_struct packet;
+
+	if (cmpstr_min(data->id,"gpvdmnodesenddata")==0)
 	{
 
-		struct inp_file decode;
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,job_name,"#job");
 
-		join_path(2,full_path,calpath_get_store_path(), job_name);
+		join_path(2,full_path,calpath_get_store_path(), data->job);
 
 		printf("sending dir %s\n",full_path);
-		send_dir(sock,full_path, 0,full_path,job_name);
+		send_dir(sock,full_path, 0,full_path,data->job);
 
-
-		char buf[512];
-		bzero(buf, LENGTH);
-
-		sprintf(buf,"gpvdmgetdata\n");
-		if(send_all(sock, buf, LENGTH,TRUE) < 0)
-		{
-			printf("%s\n", strerror(errno));
-			return -1;
-		}
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdmgetdata");
+		tx_packet(sock,&packet,NULL);
 
 	}
 
@@ -74,15 +61,16 @@ return -1;
 }
 
 
-int cmp_get_data(int sock,char *revbuf)
+int cmp_get_data(int sock,struct tx_struct *data)
 {
 	int i=0;
+
 	int njobs=0;
 	struct job* jobs=NULL;
 	char buf[512];
 	char full_path[512];
 	int state_changed=FALSE;
-	if (cmpstr_min(revbuf,"gpvdmgetdata")==0)
+	if (cmpstr_min(data->id,"gpvdmgetdata")==0)
 	{
 		printf("check getdata gpvdmgetdata\n");
 
@@ -96,14 +84,13 @@ int cmp_get_data(int sock,char *revbuf)
 
 				struct node_struct* job_node=NULL;
 				job_node=node_find(jobs[i].ip);
-				bzero(buf, LENGTH);
 
-				sprintf(buf,"gpvdmnodesenddata\n#job\njob%d\n#end",i);
-				if(send_all(job_node->sock, buf, LENGTH,TRUE) < 0)
-				{
-					printf("%s\n", strerror(errno));
-					return -1;
-				}
+				struct tx_struct packet;
+				tx_struct_init(&packet);
+				tx_set_id(&packet,"gpvdmnodesenddata");
+				sprintf(packet.job,"job%d",i);
+
+				tx_packet(job_node->sock,&packet,NULL);
 
 				state_changed=TRUE;
 				jobs[i].copy_state=1;

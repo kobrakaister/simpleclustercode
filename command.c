@@ -32,110 +32,92 @@
 #include "util.h"
 #include <sys/ioctl.h>
 #include <net/if.h>
-#include "inp.h"
+#include "tx_packet.h"
 
 struct node_struct nodes[100];
 static int nnodes=0;
 
-int send_command(int sockfd,char *command,char *dir_name,int cpus)
+int send_command(int sock,char *command,char *dir_name,int cpus)
 {
+	int ret=0;
+	struct tx_struct packet;
+	tx_struct_init(&packet);
+	tx_set_id(&packet,"gpvdmcommand");
+	strcpy(packet.exe_name,command);
+	strcpy(packet.dir_name,dir_name);
+	packet.cpus=cpus;
 
-    char sdbuf[LENGTH]; // Receiver buffer
+	ret=tx_packet(sock,&packet,NULL);
 
-	bzero(sdbuf, LENGTH);
 
-	sprintf(sdbuf,"gpvdmcommand\n#exe_name\n%s\n#dir_name\n%s\n#cpus\n%d\n#end",command,dir_name,cpus);
-
-    if(send_all(sockfd, sdbuf, LENGTH,TRUE) < 0)
-    {
-		printf("%s\n", strerror(errno));
-	    return -1;
-    }
-
-return 0;
+return ret;
 }
 
-int cmp_node_runjob(int sock,char *revbuf)
+int cmp_node_runjob(int sock,struct tx_struct *data)
 {
-	char exe_name[200];
-	char dir_name[200];
-	char buf[LENGTH];
-	int cpus=0;
-	if (cmpstr_min(revbuf,"gpvdmcommand")==0)
+	int ret=0;
+	if (cmpstr_min(data->id,"gpvdmcommand")==0)
 	{
 
-		struct inp_file decode;
-		printf("revbuf='%s' %d\n",revbuf,cmpstr_min(revbuf,"gpvdmcommand"));
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,exe_name,"#exe_name");
-		inp_search_string(&decode,dir_name,"#dir_name");
-		inp_search_int(&decode,&cpus,"#cpus");
-		printf("I will run %s\n",exe_name);
+		printf("I will run %s in a new process\n",data->exe_name);
 		if (fork()==0)
 		{
 
 			char sim_dir[200];
-			join_path(2,sim_dir,calpath_get_store_path(), dir_name);
+			join_path(2,sim_dir,calpath_get_store_path(), data->dir_name);
 			printf("change dir to %s\n",sim_dir);
 			chdir(sim_dir);
 
 			char full_exe_path[400];
 			char lib_path[400];
 			char command[400];
-			join_path(3,full_exe_path,calpath_get_store_path(), "src",exe_name);
+			join_path(3,full_exe_path,calpath_get_store_path(), "src",data->exe_name);
 			join_path(2,lib_path,calpath_get_store_path(), "src");
 			sprintf(command,"export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%s;stdbuf -i0 -o0 -e0 %s",lib_path,full_exe_path);
 			printf("full command =%s\n",command);
 			system(command);
 			
-			bzero(buf, LENGTH);
 
 
-			//send_dir(sock, sim_dir, 0, sim_dir, dir_name);
+			//send_dir(sock, sim_dir, 0, sim_dir, data->dir_name);
 
-			printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! %s\n",dir_name);
+			printf("FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! %s\n",data->dir_name);
 
-			sprintf(buf,"gpvdmsimfinished\n#dir_name\n%s\n#cpus\n%d\n#ip\n%s\n#end",dir_name,cpus,get_my_ip());
+			struct tx_struct packet;
+			tx_struct_init(&packet);
+			tx_set_id(&packet,"gpvdmsimfinished");
+			strcpy(packet.dir_name,data->dir_name);
+			strcpy(packet.ip,get_my_ip());
+			packet.cpus=data->cpus;
 
-			if(send_all(sock, buf, LENGTH,TRUE) < 0)
-			{
-				printf("%s\n", strerror(errno));
-				return -1;
-			}
+			tx_packet(sock,&packet,NULL);
+
 			 _exit(EXIT_SUCCESS);
 		}
+		
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_head_exe(int sock,char *revbuf)
+int cmp_head_exe(int sock,struct tx_struct *data)
 {
-	char command[200];
-	char dir_name[200];
-	char buf[LENGTH];
-	int cpus=0;
-	if (cmpstr_min(revbuf,"gpvdmheadex")==0)
+	int ret=0;
+	if (cmpstr_min(data->id,"gpvdmheadex")==0)
 	{
-		struct inp_file decode;
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,dir_name,"#dir");
-		inp_search_string(&decode,command,"#command");
 
-		printf("I will run %s\n",command);
+
+		printf("I will run %s\n",data->command);
 		if (fork()==0)
 		{
 
 			char sim_dir[200];
-			join_path(2,sim_dir,calpath_get_store_path(), dir_name);
+			join_path(2,sim_dir,calpath_get_store_path(), data->dir_name);
 			printf("change dir to %s\n",sim_dir);
 			chdir(sim_dir);
 
-			system(command);
+			system(data->command);
 
 			send_message("head node says done.");
 

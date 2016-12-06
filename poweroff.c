@@ -33,10 +33,11 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "inp.h"
+#include "tx_packet.h"
 
-int cmp_node_poweroff(int sock,char *revbuf)
+int cmp_node_poweroff(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmnodepoweroff")==0)
+	if (cmpstr_min(data->id,"gpvdmnodepoweroff")==0)
 	{
 		printf("poweroff\n");
 	}
@@ -44,11 +45,14 @@ int cmp_node_poweroff(int sock,char *revbuf)
 return -1;
 }
 
-int cmp_head_poweroff(int sock,char *revbuf)
+int cmp_head_poweroff(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmpoweroff")==0)
+	if (cmpstr_min(data->id,"gpvdmpoweroff")==0)
 	{
-		broadcast_to_nodes("gpvdmnodepoweroff");
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdmnodepoweroff");
+		broadcast_to_nodes(&packet);
 	}
 
 return -1;

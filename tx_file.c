@@ -200,5 +200,6 @@ tx_set_zip(&packet,1);
 
 	free(buf);
 
+	//send_command(sockfd,"ls","src",0);
 return 0;
 }

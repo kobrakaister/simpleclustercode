@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -33,54 +33,62 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "inp.h"
-
-int cmp_node_killall(int sock,char *revbuf)
+#include "tx_packet.h"
+int cmp_node_killall(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmnodekillall")==0)
+	if (cmpstr_min(data->id,"gpvdmnodekillall")==0)
 	{
 		printf("killall gpvdm_core\n");
 		system("killall gpvdm_core");
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_head_killall(int sock,char *revbuf)
+int cmp_head_killall(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmkillall")==0)
+	if (cmpstr_min(data->id,"gpvdmkillall")==0)
 	{
 		//copy_dir_to_all_nodes("src");
-		broadcast_to_nodes("gpvdmnodekillall");
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdmnodekillall");
+		broadcast_to_nodes(&packet);
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_head_stop_all_jobs(int sock,char *revbuf)
+int cmp_head_stop_all_jobs(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"stop_all_jobs")==0)
+	if (cmpstr_min(data->id,"gpvdm_stop_all_jobs")==0)
 	{
 		stop_all_jobs();
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_delete_all_jobs(int sock,char *revbuf)
+int cmp_delete_all_jobs(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"delete_all_jobs")==0)
+	if (cmpstr_min(data->id,"gpvdm_delete_all_jobs")==0)
 	{
 		jobs_clear_all();
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_head_stop_running_jobs(int sock,char *revbuf)
+int cmp_head_stop_running_jobs(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"stop_all_jobs")==0)
+	if (cmpstr_min(data->id,"gpvdm_stop_all_jobs")==0)
 	{
 		stop_all_jobs();
+		return 0;
 	}
 
 return -1;

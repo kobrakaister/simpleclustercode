@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -33,6 +33,48 @@
 #include "util.h"
 #include "inp.h"
 #include "tx_packet.h"
+
+int rx_all(char *buf,int total_len,int sock)
+{
+bzero(buf, total_len);
+int ret=0;
+char *ptr=buf;
+int len=total_len;
+int tot=0;
+int times=0;
+do
+{
+	ret = recv(sock, ptr, len, 0);
+
+	if (ret<=0)
+	{
+		return ret;
+	}
+
+
+	if (times==0)
+	{
+		if (cmpstr_min(buf,"GET / HTTP/1.1")==0)
+		{
+			char s[2000];
+			nodes_html_load(s);
+			send_all(sock, s, strlen(s),FALSE);
+			close(sock);
+		}
+	}
+
+	len-=ret;
+	tot+=ret;
+	ptr=buf+tot;
+
+	times+=1;
+
+}while(len!=0);
+
+decrypt(buf,total_len);
+return tot;
+}
+
 
 int send_all(int sock, void *buffer, int length, int encode)
 {
@@ -92,16 +134,23 @@ void tx_struct_init(struct tx_struct *in)
 	strcpy(in->src,"");
 	strcpy(in->file_name,"");
 	strcpy(in->message,"");
-	in->size=0;
+	in->size=-1;
 	strcpy(in->target,"");
 	in->load0=-1.0;
 	in->load1=-1.0;
 	in->load2=-1.0;
+	strcpy(in->exe_name,"");
+	strcpy(in->dir_name,"");
+	in->cpus=-1;
 	strcpy(in->ip,"");
-	in->stat=0;
+	in->stat=-1;
 	in->data=NULL;
 	in->zip=0;
-	in->uzipsize=0;
+	in->uzipsize=-1;
+	strcpy(in->command,"");
+	strcpy(in->job,"");
+	strcpy(in->host_name,"");
+	in->percent=-1;
 }
 
 void tx_set_id(struct tx_struct *in,char *id)
@@ -179,20 +228,35 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 	sprintf(temp,"%s\n",in->id);
 	strcat(packet,temp);
 
-	sprintf(temp,"#file_name\n%s\n",in->file_name);
-	strcat(packet,temp);
+	if (strcmp(in->file_name,"")!=0)
+	{
+		sprintf(temp,"#file_name\n%s\n",in->file_name);
+		strcat(packet,temp);
+	}
 
-	sprintf(temp,"#size\n%d\n",in->size);
-	strcat(packet,temp);
+	if (in->size!=-1)
+	{
+		sprintf(temp,"#size\n%d\n",in->size);
+		strcat(packet,temp);
+	}
 
-	sprintf(temp,"#target\n%s\n",in->target);
-	strcat(packet,temp);
+	if (strcmp(in->target,"")!=0)
+	{
+		sprintf(temp,"#target\n%s\n",in->target);
+		strcat(packet,temp);
+	}
 
-	sprintf(temp,"#stat\n%d\n",in->stat);
-	strcat(packet,temp);
+	if (in->stat!=-1)
+	{
+		sprintf(temp,"#stat\n%d\n",in->stat);
+		strcat(packet,temp);
+	}
 
-	sprintf(temp,"#src\n%s\n",in->src);
-	strcat(packet,temp);
+	if (strcmp(in->target,"")!=0)
+	{
+		sprintf(temp,"#src\n%s\n",in->target);
+		strcat(packet,temp);
+	}
 
 	if (in->zip!=0)
 	{
@@ -227,16 +291,58 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 		strcat(packet,temp);
 	}
 
+	if (in->percent!=-1)
+	{
+		sprintf(temp,"#percent\n%ld\n",in->percent);
+		strcat(packet,temp);
+	}
+
 	if (strcmp(in->ip,"")!=0)
 	{
 		sprintf(temp,"#ip\n%s\n",in->ip);
 		strcat(packet,temp);
 	}
 
+	if (strcmp(in->exe_name,"")!=0)
+	{
+		sprintf(temp,"#exe_name\n%s\n",in->exe_name);
+		strcat(packet,temp);
+	}
+
+	if (strcmp(in->dir_name,"")!=0)
+	{
+		sprintf(temp,"#dir_name\n%s\n",in->dir_name);
+		strcat(packet,temp);
+	}
+
+	if (in->cpus!=-1.0)
+	{
+		sprintf(temp,"#cpus\n%ld\n",in->cpus);
+		strcat(packet,temp);
+	}
+
+	if (strcmp(in->command,"")!=0)
+	{
+		sprintf(temp,"#command\n%s\n",in->command);
+		strcat(packet,temp);
+	}
+
+	if (strcmp(in->job,"")!=0)
+	{
+		sprintf(temp,"#job\n%s\n",in->job);
+		strcat(packet,temp);
+	}
+
+	if (strcmp(in->host_name,"")!=0)
+	{
+		sprintf(temp,"#host_name\n%s\n",in->host_name);
+		strcat(packet,temp);
+	}
+
 	sprintf(temp,"#end");
 	strcat(packet,temp);
 
-	//printf("sending %s\n",packet);
+	printf("encrypting: '%s'\n",packet,LENGTH);
 	encrypt(packet,LENGTH);
 	
 
@@ -254,6 +360,7 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 	}
 
 	int sent=0;
+	printf("tx: %s %ld\n",in->id,packet_size);
 	sent=send_all(sock, packet, packet_size,FALSE);
 
 	free(packet);
@@ -269,10 +376,38 @@ int tx_packet(int sock,struct tx_struct *in,char *buf)
 return 0;
 }
 
-int rx_packet(int sock,struct tx_struct *in,char *buf)
+int rx_packet(int sock,struct tx_struct *in)
 {
+	printf("rx_packet\n");
 	int ret=0;
 	int read_bytes=0;
+	int f_block_sz = 0;
+    char buf[LENGTH];
+	bzero(buf, LENGTH);
+	tx_struct_init(in);
+	f_block_sz=rx_all(buf,LENGTH,sock);
+
+	read_bytes+=LENGTH;
+
+	if(f_block_sz <=0)
+	{
+		printf("here %s\n", strerror(errno));
+		return -1;
+	}
+
+	if (cmpstr_min(buf,"gpvdm")==0)
+	{
+		sscanf(buf,"%s",in->id);
+	}
+
+	if (strcmp(in->id,"")==0)
+	{
+		char temp[200];
+		get_ip_from_sock(temp,sock);
+		printf("due to null:'%s' ip:%s %d\n",buf,temp,f_block_sz);
+	}
+
+
 
 	struct inp_file decode;
 
@@ -280,6 +415,7 @@ int rx_packet(int sock,struct tx_struct *in,char *buf)
 	decode.data=buf;
 	decode.fsize=strlen(buf);
 
+	printf("%s\n",in->id);
 	inp_search_string(&decode,in->file_name,"#file_name");
 	inp_search_string(&decode,in->target,"#target");
 	inp_search_string(&decode,in->src,"#src");
@@ -291,10 +427,17 @@ int rx_packet(int sock,struct tx_struct *in,char *buf)
 	inp_search_double(&decode,&(in->load1),"#load1");
 	inp_search_double(&decode,&(in->load2),"#load2");
 	inp_search_string(&decode,in->ip,"#ip");
+	inp_search_string(&decode,in->exe_name,"#exe_name");
+	inp_search_string(&decode,in->dir_name,"#dir_name");
+	inp_search_int(&decode,&(in->cpus),"#cpus");
+	inp_search_string(&decode,in->command,"#command");
+	inp_search_string(&decode,in->job,"#job");
+	inp_search_string(&decode,in->host_name,"#host_name");
+	inp_search_int(&decode,&(in->percent),"#percent");
 
 	char *packet=NULL;
 	int packet_size=0;
-
+	printf("size=%d\n",in->size);
 	if (in->size>0)
 	{
 		packet_size=((((int)in->size)/((int)LENGTH))+1)*LENGTH;

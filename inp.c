@@ -515,7 +515,7 @@ char temp[200];
 if (inp_search(temp,in,token)==0)
 {
 	sscanf(temp,"%le",out);
-	return;
+	return 0;
 }
 return -1;
 }

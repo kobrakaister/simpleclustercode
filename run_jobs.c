@@ -37,27 +37,21 @@
 struct node_struct nodes[100];
 static int nnodes=0;
 
-int cmp_runjobs(int sock_han,char *revbuf)
+int cmp_runjobs(int sock,struct tx_struct *data)
 {
+	int ret;
 
-	char exe_name[200];
-
-	if (cmpstr_min(revbuf,"gpvdmrunjobs")==0)
+	if (cmpstr_min(data->id,"gpvdmrunjobs")==0)
 	{
-		struct inp_file decode;
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,exe_name,"#exe_name");
 
-
-		calpath_set_exe_name(exe_name);
+		calpath_set_exe_name(data->exe_name);
 
 		printf("exe path set as %s\n",calpath_get_exe_name());
 
 		copy_dir_to_all_nodes("src");
 		sleep(10);
 		run_jobs();
+		return 0;
 	}
 
 return -1;

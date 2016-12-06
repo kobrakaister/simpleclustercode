@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -58,7 +58,7 @@ int send_node_load(int sock)
 return 0;
 }
 
-int cmp_nodeload(int sock,char *revbuf)
+int cmp_nodeload(int sock,struct tx_struct *data)
 {
 	char exe_name[200];
 	char dir_name[200];
@@ -66,7 +66,7 @@ int cmp_nodeload(int sock,char *revbuf)
 	int cpus=0;
 
 	int ret=0;
-	if (cmpstr_min(revbuf,"gpvdmnodegetload")==0)
+	if (cmpstr_min(data->id,"gpvdmnodegetload")==0)
 	{
 		ret=send_node_load(sock);
 		return ret;
@@ -74,29 +74,27 @@ int cmp_nodeload(int sock,char *revbuf)
 return -1;
 }
 
-int cmp_rxloadstats(int sock,char *revbuf)
+int cmp_rxloadstats(int sock,struct tx_struct *data)
 {
 	int ret;
-	struct tx_struct data;
 	struct node_struct* node;
-	if (cmpstr_min(revbuf,"gpvdmload")==0)
+	if (cmpstr_min(data->id,"gpvdmload")==0)
 	{
-		ret=rx_packet(sock,&data,revbuf);
 
-		node=node_find(data.ip);
+		node=node_find(data->ip);
 		if (node!=NULL)
 		{
-			node->load0=data.load0;
+			node->load0=data->load0;
 			node->alive=time(NULL);
 		}
+		return 0;
 	}
 
 return -1;
 }
 
-int cmp_rxsetmaxloads(int sock,char *revbuf)
+int cmp_rxsetmaxloads(int sock,struct tx_struct *data)
 {
-//printf("test send list %s\n",revbuf);
 char buf[LENGTH];
 int i;
 char *node_ip=NULL;
@@ -106,17 +104,15 @@ char max_buf[100];
 int cpus=0.0;
 int ret=0;
 
-	if (cmpstr_min(revbuf,"gpvdm_set_max_loads")==0)
+	if (cmpstr_min(data->id,"gpvdm_set_max_loads")==0)
 	{
-		struct tx_struct data;
 		char *buf=NULL;
-		ret=rx_packet(sock,&data,revbuf);
 
-		printf("rod %s %s\n",revbuf,data.data);
+		printf("rod %s\n",data->data);
 		struct inp_file in;
 		inp_init(&in);
-		in.data=data.data;
-		in.fsize=data.size;
+		in.data=data->data;
+		in.fsize=data->size;
 		inp_reset_read(&in);
 
 		max_load  = (char*)-1;

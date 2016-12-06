@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -121,7 +121,9 @@ calpath_set_store_path(file_store_path);
 
 	sigaction(SIGINT, &sigIntHandler, NULL);
 
-    while(success == 0)
+	jobs_load();
+	log_alarm_wakeup (0);
+	while(success == 0)
     {
         sin_size = sizeof(struct sockaddr_in);
         /* Wait a connection, and obtain a new socket file despriptor for single connection */

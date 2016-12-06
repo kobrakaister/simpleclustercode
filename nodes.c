@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -41,7 +41,12 @@
 struct node_struct nodes[100];
 static int nnodes=0;
 
-int broadcast_to_nodes(char *command)
+struct node_struct *nodes_list()
+{
+return nodes;
+}
+
+int broadcast_to_nodes(struct tx_struct *packet)
 {
 printf("broadcast\n");
 int i;
@@ -54,14 +59,8 @@ char buf[LENGTH];
 		{
 			printf("broadcast to %s\n",nodes[i].host_name);
 
-			bzero(buf, LENGTH);
-			sprintf(buf,"%s",command);
+			tx_packet(nodes[i].sock,packet,NULL);
 
-			if(send_all(nodes[i].sock, buf, LENGTH,TRUE) < 0)
-			{
-				printf("%s\n", strerror(errno));
-				return -1;
-			}
 		}
 	}
 
@@ -99,31 +98,23 @@ return NULL;
 
 int register_node(int sock)
 {
-//printf("send register node\n");
-char sdbuf[LENGTH]; // Receiver buffer
+
 int cpus;
 	char host_name[200];
-	//struct ifreq ifr;
-	//ifr.ifr_addr.sa_family = AF_INET;
-    //strncpy(ifr.ifr_name , interface , IFNAMSIZ-1);
-	//ioctl(sock, SIOCGIFADDR, &ifr);
-
-	//sprintf(my_ip,"%s",inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr) );
 
 	gethostname(host_name, 200);
 
 	cpus = sysconf( _SC_NPROCESSORS_ONLN );
 
-	bzero(sdbuf, LENGTH);
+	struct tx_struct packet;
+	tx_struct_init(&packet);
+	tx_set_id(&packet,"gpvdmaddnode");
+	strcpy(packet.ip, get_my_ip());
+	packet.cpus=cpus;
+	strcpy(packet.host_name, host_name);
 
-	sprintf(sdbuf,"gpvdmaddnode\n#ip\n%s\n#cpus\n%d\n#host_name\n%s\n#ver\n#1.0\n#end", get_my_ip(),cpus,host_name);
+	tx_packet(sock,&packet,NULL);
 
-	if(send_all(sock, sdbuf, LENGTH,TRUE) < 0)
-	{
-		printf("%s\n", strerror(errno));
-		return -1;
-	}
-	
 }
 
 int close_all_open()
@@ -141,44 +132,23 @@ int i;
 
 int send_delete_node(int sock)
 {
-//printf("send deregister node\n");
-char sdbuf[LENGTH]; // Receiver buffer
-int cpus;
+	struct tx_struct packet;
+	tx_struct_init(&packet);
+	tx_set_id(&packet,"gpvdmdeletenode");
 
-	cpus = sysconf( _SC_NPROCESSORS_ONLN );
-
-	bzero(sdbuf, LENGTH);
-
-	sprintf(sdbuf,"gpvddeletenode");
-
-	if(send_all(sock, sdbuf, LENGTH,TRUE) < 0)
-	{
-		printf("%s\n", strerror(errno));
-		return -1;
-	}
-	
+	tx_packet(sock,&packet,NULL);
 }
 
-int cmp_addnode(int sock_han,char *revbuf)
+int cmp_addnode(int sock,struct tx_struct *data)
 {
-char my_ip[20];
 struct inp_file decode;
 char host_name[100];
-char full_host_name[100];
 int cpus=0;
-	if (cmpstr_min(revbuf,"gpvdmaddnode")==0)
+int ret=0;
+	if (cmpstr_min(data->id,"gpvdmaddnode")==0)
 	{
 
-		//printf( "address is %s:%u\n",, (unsigned)ntohs(adr_inet.sin_port));
-		get_ip_from_sock(my_ip,sock_han);
-
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,my_ip,"#ip");
-		inp_search_string(&decode,host_name,"#host_name");
-		inp_search_int(&decode,&cpus,"#cpus");
-		node_add("slave",my_ip,cpus,sock_han,host_name);
+		node_add("slave",data->ip,data->cpus,sock,data->host_name);
 		nodes_print();
 		return 0;
 	}
@@ -186,14 +156,14 @@ int cpus=0;
 return -1;
 }
 
-int cmp_deletenode(int sock_han,char *revbuf)
+int cmp_deletenode(int sock_han,struct tx_struct *data)
 {
 char my_ip[20];
 struct inp_file decode;
 char host_name[100];
 char full_host_name[100];
 int cpus=0;
-	if (cmpstr_min(revbuf,"gpvddeletenode")==0)
+	if (cmpstr_min(data->id,"gpvdmdeletenode")==0)
 	{
 
 
@@ -216,13 +186,12 @@ printf("number\ttype\tname\t\tip\t\tcpus\tmax_cpus\tsock\tload\tload0\tlast_seen
 	}
 }
 
-int cmp_sendnodelist(int sock,char *revbuf)
+int cmp_sendnodelist(int sock,struct tx_struct *data)
 {
-//printf("test send list %s\n",revbuf);
 char buf[LENGTH];
 int i;
 
-	if (cmpstr_min(revbuf,"gpvdmsendnodelist")==0)
+	if (cmpstr_min(data->id,"gpvdmsendnodelist")==0)
 	{
 		nodes_txnodelist();
 		return 0;
@@ -230,6 +199,7 @@ int i;
 
 return -1;
 }
+
 
 int nodes_html_load(char *buf)
 {
@@ -265,30 +235,27 @@ int nodes_txnodelist()
 	char temp[100];
 	int i;
 
+	struct tx_struct packet;
 	struct node_struct* master=NULL;
 	master=node_find_master();
 
 	if (master!=NULL)
 	{
 		
-		buf=malloc(LENGTH*2*sizeof(char));
-		bzero(buf, LENGTH*2);
-
-		sprintf(buf,"gpvdmnodelist\n");
-
+		buf=malloc(LENGTH*sizeof(char));
+		bzero(buf, LENGTH);
 
 		for (i=0;i<nnodes;i++)
 		{
 			sprintf(temp,"%s:%s:%d:%d:%lf:%d:%d\n",nodes[i].host_name,nodes[i].ip,nodes[i].cpus,nodes[i].load,nodes[i].load0,nodes[i].max_cpus,node_alive_time(&(nodes[i])));
-			strcat((buf+LENGTH),temp);
+			strcat(buf,temp);
 		}
 
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdmnodelist");
+		packet.size=strlen(buf);
 
-		if(send_all(master->sock, buf, LENGTH*2,TRUE) < 0)
-		{
-			printf("%s\n", strerror(errno));
-			return -1;
-		}
+		tx_packet(master->sock,&packet,buf);
 
 		free(buf);
 
@@ -296,6 +263,11 @@ int nodes_txnodelist()
 
 
 return 0;
+}
+
+int nodes_get_nnodes()
+{
+return nnodes;
 }
 
 void nodes_reset()
@@ -410,6 +382,7 @@ printf("here xxx\n");
 
 						send_command(nodes[i].sock,calpath_get_exe_name(),next->name,next->cpus_needed);
 						strcpy(next->ip,nodes[i].ip);
+						next->t_start=time(NULL);
 						nodes[i].load++;
 						next->status=1;
 						nodes_print();
@@ -433,47 +406,36 @@ pthread_mutex_unlock(&lock);
 
 }
 
-int cmp_simfinished(int sock,char *revbuf)
+int cmp_simfinished(int sock,struct tx_struct *data)
 {
-	char dir_name[200];
-	int cpus=0;
-	char ip[200];
 	char buf[512];
-	char full_dir[200];
 	int ret=0;
-	if (cmpstr_min(revbuf,"gpvdmsimfinished")==0)
+	struct tx_struct packet;
+	if (cmpstr_min(data->id,"gpvdmsimfinished")==0)
 	{
-
-		struct inp_file decode;
-		inp_init(&decode);
-		decode.data=revbuf;
-		decode.fsize=strlen(revbuf);
-		inp_search_string(&decode,dir_name,"#dir_name");
-		inp_search_int(&decode,&cpus,"#cpus");
-		inp_search_string(&decode,ip,"#ip");
-
+		return 0;
 		struct job* job=NULL;
-		job=jobs_find_job(dir_name);
+		job=jobs_find_job(data->dir_name);
 		if (job!=NULL)
 		{
 
 			job->status=2;
-
+			job->t_stop=time(NULL);
 			jobs_print();
 
 			run_jobs(sock);
 
 			struct node_struct* node=NULL;
 
-			node=node_find(ip);
+			node=node_find(data->ip);
 			if (node==NULL)
 			{
-				printf("I can't find IP %s\n",ip);
+				printf("I can't find IP %s\n",data->ip);
 			}
 
-			printf("load was %d %s \n",node->load,dir_name);
-			node->load-=cpus;
-			printf("load now %d %s\n",node->load,dir_name);
+			printf("load was %d %s \n",node->load,data->dir_name);
+			node->load-=data->cpus;
+			printf("load now %d %s\n",node->load,data->dir_name);
 			jobs_print();
 		}
 
@@ -484,50 +446,43 @@ int cmp_simfinished(int sock,char *revbuf)
 		//printf("sending @master - want!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		if (master!=NULL)
 		{
-			/*struct job* my_job=jobs_find_job(dir_name);
+			/*struct job* my_job=jobs_find_job(data->dir_name);
 			if (my_job!=NULL)
 			{
-				//printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",dir_name);
+				//printf("sending @master!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s\n",data->dir_name);
 
-				join_path(2,full_dir,calpath_get_store_path(), dir_name);
+				join_path(2,full_dir,calpath_get_store_path(), data->dir_name);
 
 			
 				ret=send_dir(master->sock,full_dir, 0,full_dir,my_job->target);
 
 				if (ret!=0)
 				{
-					printf("dir not found %s %s\n",dir_name, calpath_get_store_path());
+					printf("dir not found %s %s\n",data->dir_name, calpath_get_store_path());
 				}
 
 			}else
 			{
-				printf("Can't find job %s\n",dir_name);
+				printf("Can't find job %s\n",data->dir_name);
 				jobs_print();
 			}*/
 	printf("here5\n");
 
-			bzero(buf, LENGTH);
 
-			sprintf(buf,"gpvdmpercent\n#percent\n%lf\n#end",jobs_cal_percent_finished());
+			tx_struct_init(&packet);
+			tx_set_id(&packet,"gpvdmpercent");
+			packet.percent=(int)jobs_cal_percent_finished();
 
-			if(send_all(master->sock, buf, LENGTH,TRUE) < 0)
-			{
-				printf("%s\n", strerror(errno));
-				return -1;
-			}
+			tx_packet(sock,&packet,NULL);
+
 
 			printf("jobs remaining %d\n",jobs_remaining());
 			if (jobs_remaining()==0)
 			{
-				bzero(buf, LENGTH);
 
-				sprintf(buf,"gpvdmfinished\n");
-
-				if(send_all(master->sock, buf, LENGTH,TRUE) < 0)
-				{
-					printf("%s\n", strerror(errno));
-					return -1;
-				}
+				tx_struct_init(&packet);
+				tx_set_id(&packet,"gpvdmfinished");
+				tx_packet(sock,&packet,NULL);
 
 				//jobs_clear_all();
 			}

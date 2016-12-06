@@ -80,30 +80,21 @@ free(buf);
 return;
 }
 
-int cmp_sync_packet_one(int sock,char *revbuf)
+int cmp_sync_packet_one(int sock,struct tx_struct *data)
 {
 struct inp_file decode;
 int ret=0;
 int f_block_sz;
 char full_path[400];
-struct tx_struct data;
 
-	if (cmpstr_min(revbuf,"gpvdm_sync_packet_one")==0)
+	if (cmpstr_min(data->id,"gpvdm_sync_packet_one")==0)
 	{
 		printf("gpvdm_sync_packet_one\n");
-		tx_struct_init(&data);
-		ret=rx_packet(sock,&data,revbuf);
-
-		if(ret<0)
-		{
-			printf("Not got all the data! \n");
-			return -1;
-		}
 
 		inp_init(&decode);
-		decode.data=data.data;
-		decode.fsize=strlen(data.data);
-		//printf("a got data%s\n",data.data);
+		decode.data=data->data;
+		decode.fsize=strlen(data->data);
+		//printf("a got data%s\n",data->data);
 		char *fname=(char *)-1;
 		char fname_buf[400];
 
@@ -138,7 +129,7 @@ struct tx_struct data;
 			}
 			strcpy(md5_buf,md5);
 
-			cal_abs_path_from_target(full_path,data.target,fname_buf);
+			cal_abs_path_from_target(full_path,data->target,fname_buf);
 
 			if (isdir(full_path)!=0)
 			{
@@ -181,13 +172,13 @@ struct tx_struct data;
 		tx_struct_init(&packet);
 		tx_set_id(&packet,"gpvdm_sync_packet_two");
 		tx_set_size(&packet,pos);
-		tx_set_target(&packet,data.target);
-		tx_set_src(&packet,data.src);
+		tx_set_target(&packet,data->target);
+		tx_set_src(&packet,data->src);
 
 		tx_packet(sock,&packet,build);
 
 		free(build);
-		free(data.data);		
+		free(data->data);		
 
 		return 0;
 		
@@ -270,7 +261,7 @@ return -1;
 }
 
 
-int cmp_sync_packet_two(int sock,char *revbuf)
+int cmp_sync_packet_two(int sock,struct tx_struct *data)
 {
 struct inp_file decode;
 
@@ -278,23 +269,12 @@ int f_block_sz;
 char full_path[400];
 int ret=0;
 
-	struct tx_struct data;
-	if (cmpstr_min(revbuf,"gpvdm_sync_packet_two")==0)
+	if (cmpstr_min(data->id,"gpvdm_sync_packet_two")==0)
 	{
-		printf("rx sync two packet %s\n",revbuf);
-
-		tx_struct_init(&data);
-		ret=rx_packet(sock,&data,revbuf);
-
-		if(ret<0)
-		{
-			printf("Not got all the data! \n");
-			return -1;
-		}
 
 		inp_init(&decode);
-		decode.data=data.data;
-		decode.fsize=strlen(data.data);
+		decode.data=data->data;
+		decode.fsize=strlen(data->data);
 
 
 		char *fname=NULL;
@@ -313,17 +293,18 @@ int ret=0;
 
 			strcpy(fname_buf,fname);
 
-			cal_abs_path_from_target(full_path,data.target,fname_buf);
+			cal_abs_path_from_target(full_path,data->target,fname_buf);
 
-			send_file(sock,data.src,full_path,data.target);
+			send_file(sock,data->src,full_path,data->target);
 
 		}
 
-	free(data.data);
+	free(data->data);
 	printf("ended\n");
+	return 0;
 	}
 	
 
-return 0;
+return -1;
 		
 }

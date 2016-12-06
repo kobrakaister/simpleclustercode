@@ -33,10 +33,11 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "inp.h"
+#include "tx_packet.h"
 
-int cmp_node_quit(int sock,char *revbuf)
+int cmp_node_quit(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmquit")==0)
+	if (cmpstr_min(data->id,"gpvdmquit")==0)
 	{
 		exit(0);
 	}
@@ -44,11 +45,14 @@ int cmp_node_quit(int sock,char *revbuf)
 return -1;
 }
 
-int cmp_head_quit(int sock,char *revbuf)
+int cmp_head_quit(int sock,struct tx_struct *data)
 {
-	if (cmpstr_min(revbuf,"gpvdmquit")==0)
+	if (cmpstr_min(data->id,"gpvdmquit")==0)
 	{
-		broadcast_to_nodes("gpvdmquit");
+		struct tx_struct packet;
+		tx_struct_init(&packet);
+		tx_set_id(&packet,"gpvdmquit");
+		broadcast_to_nodes(&packet);
 		exit(0);
 	}
 

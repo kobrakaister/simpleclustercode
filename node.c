@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -150,7 +150,6 @@ int node()
 
 		global_sock=sockfd;
 
-		char revbuf[LENGTH];
 		int f_block_sz;
 
 
@@ -176,39 +175,69 @@ int node()
 
 		send_node_load(sockfd);
 
-		while(f_block_sz = recv(sockfd, revbuf, LENGTH, MSG_WAITALL))
+		struct tx_struct data;
+		int ret=0;
+		int processed=FALSE;
+		while(1)
 		{
-			decrypt(revbuf,LENGTH);
-			//printf("%s\n",revbuf);
+			ret=rx_packet(sockfd,&data);
 
-			cmp_node_runjob(sockfd,revbuf);
-
-			cmp_rxfile(sockfd,revbuf);
-
-			cmp_node_killall(sockfd,revbuf);
-
-			cmp_node_sleep(sockfd,revbuf);
-
-			cmp_node_poweroff(sockfd,revbuf);
-
-			cmp_node_send_data(sockfd,revbuf);
-
-			cmp_nodeload(sockfd,revbuf);
-
-			cmp_node_quit(sockfd,revbuf);
-
-			cmp_slave_clean(sockfd,revbuf);
-
-			cmp_sync_packet_one(sockfd,revbuf);
-
-			cmp_sync_packet_two(sockfd,revbuf);
-
-			if(f_block_sz < 0)
+			processed=FALSE;
+			
+			if (ret==-1)
 			{
-				printf(" %s\n", strerror(errno));
 				break;
 			}
 
+			if (cmp_node_runjob(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_rxfile(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_node_killall(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_node_sleep(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_node_poweroff(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_node_send_data(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_nodeload(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_node_quit(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_slave_clean(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_sync_packet_one(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}else
+			if (cmp_sync_packet_two(sockfd,&data)==0)
+			{
+				processed=TRUE;
+			}
+			
+			if (processed==FALSE)
+			{
+				printf("Command not understood!!!!!!!!!!!!!!!!! %s\n",data.id);
+			}
 		
 		}
 

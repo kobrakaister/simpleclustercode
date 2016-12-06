@@ -4,7 +4,7 @@
 // 
 //  Copyright (C) 2012 Roderick C. I. MacKenzie <r.c.i.mackenzie@googlemail.com>
 //
-//	www.roderickmackenzie.eu
+//	https://www.gpvdm.com
 //	Room B86 Coates, University Park, Nottingham, NG7 2RD, UK
 //
 //
@@ -35,107 +35,142 @@
 #include "inp.h"
 
 
-int rx_all(char *buf,int total_len,int sock)
-{
-bzero(buf, total_len);
-int ret=0;
-char *ptr=buf;
-int len=total_len;
-int tot=0;
-int times=0;
-do
-{
-	ret = recv(sock, ptr, len, 0);
-
-	if (ret<=0)
-	{
-		return ret;
-	}
-
-
-	if (times==0)
-	{
-		if (cmpstr_min(buf,"GET / HTTP/1.1")==0)
-		{
-			char s[2000];
-			nodes_html_load(s);
-			send_all(sock, s, strlen(s),FALSE);
-			close(sock);
-		}
-	}
-
-	len-=ret;
-	tot+=ret;
-	ptr=buf+tot;
-
-	times+=1;
-
-}while(len!=0);
-
-decrypt(buf,total_len);
-return tot;
-}
-
 void *rx_loop(void *s)
 {
+int ret=0;
+int processed=FALSE;
+struct tx_struct data;
 int sock=*((int*)s);
-	int f_block_sz = 0;
-    char revbuf[LENGTH];
 
-	while(f_block_sz=rx_all(revbuf,LENGTH,sock))
+
+	while(1)
 	{
+		processed=FALSE;
+		ret=rx_packet(sock,&data);
 
-		if(f_block_sz <=0)
+		if (ret==-1)
 		{
-			printf("here %s\n", strerror(errno));
+			printf("Breaking due to -1\n");
 			break;
 		}
-
-		cmp_rxfile(sock,revbuf);
-
-		cmp_addjob(sock,revbuf);
-
-		cmp_addnode(sock,revbuf);
-
-		cmp_deletenode(sock,revbuf);
-
-		cmp_runjobs(sock,revbuf);
-
-		cmp_simfinished(sock,revbuf);
-
-		cmp_register_master(sock,revbuf);
-
-		cmp_head_killall(sock,revbuf);
-
-		cmp_head_sleep(sock,revbuf);
-
-		cmp_head_poweroff(sock,revbuf);
-
-		cmp_sendnodelist(sock,revbuf);
-
-		cmp_get_data(sock,revbuf);
-
-		cmp_head_exe(sock,revbuf);
-
-		cmp_master_clean(sock,revbuf);
-
-		cmp_rxloadstats(sock,revbuf);
-
-		cmp_head_quit(sock,revbuf);
-
-		cmp_rxsetmaxloads(sock,revbuf);
-
-		cmp_sync_packet_one(sock,revbuf);
-
-		cmp_sync_packet_two(sock,revbuf);
-
-		cmp_send_job_list(sock,revbuf);
-
-		cmp_head_stop_all_jobs(sock,revbuf);
-
-		cmp_delete_all_jobs(sock,revbuf);
-
-		bzero(revbuf, LENGTH);
+		
+		if (cmp_rxfile(sock,&data)==0)
+		{
+			printf("a\n");
+			processed=TRUE;
+		}else
+		if (cmp_addjob(sock,&data)==0)
+		{
+			printf("b\n");
+			processed=TRUE;
+		}else
+		if (cmp_addnode(sock,&data)==0)
+		{
+			printf("c\n");
+			processed=TRUE;
+		}else
+		if (cmp_deletenode(sock,&data)==0)
+		{
+			printf("d\n");
+			processed=TRUE;
+		}else
+		if (cmp_runjobs(sock,&data)==0)
+		{
+			printf("e\n");
+			processed=TRUE;
+		}else
+		if (cmp_simfinished(sock,&data)==0)
+		{
+			printf("f\n");
+			processed=TRUE;
+		}else
+		if (cmp_register_master(sock,&data)==0)
+		{
+			printf("g\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_killall(sock,&data)==0)
+		{
+			printf("h\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_sleep(sock,&data)==0)
+		{
+			printf("i\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_poweroff(sock,&data)==0)
+		{
+			printf("j\n");
+			processed=TRUE;
+		}else
+		if (cmp_sendnodelist(sock,&data)==0)
+		{
+			printf("k\n");
+			processed=TRUE;
+		}else
+		if (cmp_get_data(sock,&data)==0)
+		{
+			printf("l\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_exe(sock,&data)==0)
+		{
+			printf("m\n");
+			processed=TRUE;
+		}else
+		if (cmp_master_clean(sock,&data)==0)
+		{
+			printf("n\n");
+			processed=TRUE;
+		}else
+		if (cmp_rxloadstats(sock,&data)==0)
+		{
+			printf("o\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_quit(sock,&data)==0)
+		{
+			printf("p\n");
+			processed=TRUE;
+		}else
+		if (cmp_rxsetmaxloads(sock,&data)==0)
+		{
+			printf("1\n");
+			processed=TRUE;
+		}else
+		if (cmp_sync_packet_one(sock,&data)==0)
+		{
+			printf("2\n");
+			processed=TRUE;
+		}else
+		if (cmp_sync_packet_two(sock,&data)==0)
+		{
+			printf("3\n");
+			processed=TRUE;
+		}else
+		if (cmp_send_job_list(sock,&data)==0)
+		{
+			printf("4\n");
+			processed=TRUE;
+		}else
+		if (cmp_head_stop_all_jobs(sock,&data)==0)
+		{
+			printf("5\n");
+			processed=TRUE;
+		}else
+		if (cmp_delete_all_jobs(sock,&data)==0)
+		{
+			printf("6\n");
+			processed=TRUE;
+		}
+		
+		if (processed==FALSE)
+		{
+			printf("Command not understood!!!!!!!!!!!!!!!!! %s\n",data.id);
+			getchar();
+		}
+		jobs_save();
 
 	}
 
